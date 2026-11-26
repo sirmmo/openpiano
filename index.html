@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>OpenPiano</title>
+  <meta name="description" content="A free piano helper for kids: plug in a USB MIDI keyboard, follow the falling notes, learn to read music.">
+  <meta name="theme-color" content="#fff8ef">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <img src="icon.svg" alt="" width="30" height="30">
+      <span>OpenPiano</span>
+    </div>
+    <nav class="tabs" role="tablist" aria-label="Modes">
+      <button class="tab" role="tab" data-mode="free"><span class="tab-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M9 4v16M15 4v16" /><path d="M7 4h4v8H7zM13 4h4v8h-4z" fill="currentColor"/></svg></span><span data-i18n="modeFree">Free play</span></button>
+      <button class="tab" role="tab" data-mode="songs"><span class="tab-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M9 17.5a3 3 0 1 1-2-2.83V5.2l12-2.4v12.7a3 3 0 1 1-2-2.83V7.6l-8 1.6v8.3z"/></svg></span><span data-i18n="modeSongs">Songs</span></button>
+      <button class="tab" role="tab" data-mode="notes"><span class="tab-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 6h20M2 10h20M2 14h20M2 18h20"/><ellipse cx="15" cy="12" rx="3.2" ry="2.3" transform="rotate(-20 15 12)" fill="currentColor" stroke="none"/></svg></span><span data-i18n="modeNotes">Read notes</span></button>
+      <button class="tab" role="tab" data-mode="ear"><span class="tab-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 9a5 5 0 0 1 10 0c0 3-3 4-3 7a3 3 0 0 1-5.5 1.6"/><path d="M10 9.5a2 2 0 0 1 4 0c0 1.2-1 1.6-1.5 2.3"/></svg></span><span data-i18n="modeEar">Listen &amp; find</span></button>
+    </nav>
+    <div class="tools">
+      <span class="star-total" aria-label="Stars"><span class="star on" aria-hidden="true">★</span><b id="totalStars">0</b></span>
+      <button id="midiBtn" class="pill" data-state="idle"><span class="dot" aria-hidden="true"></span><span id="midiText"></span></button>
+      <button id="settingsBtn" class="icon-btn" aria-label="Settings" data-i18n-label="settings">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M19.4 13a7.6 7.6 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.4 7.4 0 0 0-1.7-1L15 3.3h-4l-.4 2.6a7.4 7.4 0 0 0-1.7 1l-2.5-1-2 3.5L6.6 11a7.6 7.6 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1c.5.4 1.1.7 1.7 1l.4 2.6h4l.4-2.6c.6-.3 1.2-.6 1.7-1l2.5 1 2-3.5zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" transform="translate(-1 0)"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main id="stage">
+    <!-- Free play -->
+    <section class="mode" id="mode-free" hidden>
+      <div class="free-wrap">
+        <div class="free-card">
+          <div id="freeNote" class="free-note">♪</div>
+          <div id="freeOther" class="free-other"></div>
+          <div id="freeOctave" class="free-octave"></div>
+          <div id="freeChord" class="free-chord" aria-live="polite"></div>
+        </div>
+        <div class="free-side">
+          <p id="freeHint" class="free-hint"><strong data-i18n="freeHint">Play any key!</strong> <span data-i18n="freeSub"></span></p>
+          <div id="freeStaff" class="staff-box"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Songs -->
+    <section class="mode" id="mode-songs" hidden>
+      <div id="songPicker" class="picker">
+        <h2 data-i18n="pickSong">Pick a song</h2>
+        <div id="songGrid" class="song-grid"></div>
+      </div>
+      <div id="songPlayer" class="player" hidden>
+        <div class="player-bar">
+          <button id="backBtn" class="btn ghost">‹ <span data-i18n="back">Back</span></button>
+          <h2 id="songTitle" class="player-title"></h2>
+          <div class="player-controls">
+            <button id="playBtn" class="btn primary"></button>
+            <button id="listenBtn" class="btn"></button>
+            <button id="restartBtn" class="btn ghost">↺ <span data-i18n="restart">From the top</span></button>
+            <label class="switch"><input type="checkbox" id="waitToggle"><span class="track" aria-hidden="true"></span><span data-i18n="waitMode">Wait for me</span></label>
+            <label class="speed"><span data-i18n="speed">Speed</span> <input type="range" id="speedRange" min="0.5" max="1.5" step="0.1"> <output id="speedVal"></output></label>
+          </div>
+        </div>
+        <div class="progress"><div id="songProgress"></div></div>
+        <div class="lane-wrap">
+          <canvas id="lane"></canvas>
+          <div id="songOops" class="lane-score"></div>
+          <div id="playerMsg" class="lane-msg"></div>
+          <div id="songResult" class="result" hidden>
+            <div class="result-stars stars big"></div>
+            <div class="result-title"></div>
+            <div class="result-detail"></div>
+            <div class="result-actions">
+              <button class="btn primary" data-act="again" data-i18n="playAgain">Play again</button>
+              <button class="btn" data-act="next" data-i18n="nextSong">Next song</button>
+              <button class="btn ghost" data-act="list" data-i18n="moreSongs">All songs</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Read notes -->
+    <section class="mode quiz" id="mode-notes" hidden>
+      <div class="quiz-levels picker">
+        <h2 data-i18n="pickLevel">Pick a level</h2>
+        <div class="level-grid"></div>
+      </div>
+      <div class="quiz-play" hidden>
+        <div class="quiz-bar">
+          <button class="btn ghost quiz-back">‹ <span data-i18n="back">Back</span></button>
+          <span class="quiz-level-name"></span>
+          <label class="switch any-octave"><input type="checkbox"><span class="track" aria-hidden="true"></span><span data-i18n="anyOctave">Any octave counts</span></label>
+        </div>
+        <div class="quiz-question">
+          <div class="quiz-staff staff-box"></div>
+          <div class="quiz-feedback" aria-live="polite"></div>
+          <div class="quiz-dots"></div>
+        </div>
+        <div class="quiz-result result" hidden>
+          <div class="result-stars stars big"></div>
+          <div class="result-title"></div>
+          <div class="result-detail"></div>
+          <div class="result-actions">
+            <button class="btn primary" data-act="again" data-i18n="playAgain">Play again</button>
+            <button class="btn ghost" data-act="list" data-i18n="pickLevel">Pick a level</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Listen & find -->
+    <section class="mode quiz" id="mode-ear" hidden>
+      <div class="quiz-levels picker">
+        <h2 data-i18n="pickLevel">Pick a level</h2>
+        <div class="level-grid"></div>
+      </div>
+      <div class="quiz-play" hidden>
+        <div class="quiz-bar">
+          <button class="btn ghost quiz-back">‹ <span data-i18n="back">Back</span></button>
+          <span class="quiz-level-name"></span>
+          <label class="switch any-octave"><input type="checkbox"><span class="track" aria-hidden="true"></span><span data-i18n="anyOctave">Any octave counts</span></label>
+        </div>
+        <div class="quiz-question">
+          <button class="ear-btn" aria-describedby="earHear">
+            <svg viewBox="0 0 24 24" width="54" height="54" aria-hidden="true"><path fill="currentColor" d="M4 9v6h4l5 4V5L8 9H4zm12.5 3a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4zM14 3.2v2.1a7 7 0 0 1 0 13.4v2.1a9 9 0 0 0 0-17.6z"/></svg>
+            <span id="earHear" data-i18n="hearAgain">Hear it again</span>
+          </button>
+          <div class="quiz-feedback" aria-live="polite"></div>
+          <div class="quiz-dots"></div>
+        </div>
+        <div class="quiz-result result" hidden>
+          <div class="result-stars stars big"></div>
+          <div class="result-title"></div>
+          <div class="result-detail"></div>
+          <div class="result-actions">
+            <button class="btn primary" data-act="again" data-i18n="playAgain">Play again</button>
+            <button class="btn ghost" data-act="list" data-i18n="pickLevel">Pick a level</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div class="keyboard-wrap">
+    <div id="keyboard" class="keyboard"></div>
+  </div>
+
+  <dialog id="settingsDlg" aria-labelledby="settingsTitle">
+    <form id="settingsForm" method="dialog">
+      <h2 id="settingsTitle" data-i18n="settings">Settings</h2>
+
+      <label class="row"><span data-i18n="language">Language</span>
+        <select name="lang"><option value="en">English</option><option value="it">Italiano</option></select>
+      </label>
+
+      <fieldset class="row">
+        <legend data-i18n="noteNames">Note names</legend>
+        <div class="seg">
+          <label><input type="radio" name="noteNames" value="letters"><span data-i18n="namesLetters">C D E</span></label>
+          <label><input type="radio" name="noteNames" value="solfege"><span data-i18n="namesSolfege">Do Re Mi</span></label>
+          <label><input type="radio" name="noteNames" value="both"><span data-i18n="namesBoth">Both</span></label>
+        </div>
+      </fieldset>
+
+      <label class="row check"><input type="checkbox" name="labels"> <span data-i18n="keyLabels">Show names on the keys</span></label>
+
+      <fieldset class="row">
+        <legend data-i18n="instrument">Sound</legend>
+        <div class="seg">
+          <label><input type="radio" name="instrument" value="piano"><span data-i18n="instPiano">Piano</span></label>
+          <label><input type="radio" name="instrument" value="synth"><span data-i18n="instSynth">Soft synth</span></label>
+        </div>
+      </fieldset>
+
+      <label class="row"><span data-i18n="volume">Volume</span>
+        <input type="range" name="volume" min="0" max="1" step="0.05">
+      </label>
+
+      <label class="row"><span data-i18n="kbSize">Keys on screen</span>
+        <select name="size">
+          <option value="25">25</option><option value="37">37</option><option value="49">49</option><option value="61">61</option><option value="88">88</option>
+        </select>
+      </label>
+
+      <div class="row group">
+        <div><span data-i18n="midiDevices">MIDI keyboards</span>: <b id="midiList"></b></div>
+        <label class="check"><input type="checkbox" name="midiSound"> <span data-i18n="midiSound">Make sound when playing a MIDI keyboard</span></label>
+        <small data-i18n="midiSoundHint"></small>
+        <label id="midiOutRow" class="row" hidden><span data-i18n="midiOut">Play demos through</span>
+          <select name="midiOut"></select>
+        </label>
+      </div>
+
+      <p class="help" data-i18n="computerKeys"></p>
+
+      <div class="dlg-foot">
+        <button type="button" id="resetBtn" class="btn ghost danger" data-i18n="resetProgress">Erase all stars</button>
+        <button class="btn primary" value="close" data-i18n="done">Done</button>
+      </div>
+      <p class="about"><span data-i18n="about">OpenPiano is free and open source.</span> <a href="https://github.com/sirmmo/openpiano" target="_blank" rel="noopener">GitHub</a></p>
+    </form>
+  </dialog>
+
+  <div id="splash" class="splash">
+    <div class="splash-card">
+      <img src="icon.svg" alt="" width="84" height="84">
+      <h1>OpenPiano</h1>
+      <p class="tagline" data-i18n="tagline">Learn the piano, one note at a time</p>
+      <button id="startBtn" class="btn primary huge" data-i18n="start">Let's play!</button>
+      <p class="splash-hint" data-i18n="splashHint"></p>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="js/core.js"></script>
+  <script src="js/notes.js"></script>
+  <script src="js/settings.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/midi.js"></script>
+  <script src="js/keyboard.js"></script>
+  <script src="js/staff.js"></script>
+  <script src="js/songs.js"></script>
+  <script src="js/mode-free.js"></script>
+  <script src="js/mode-songs.js"></script>
+  <script src="js/mode-quiz.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
