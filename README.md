@@ -2,7 +2,7 @@
 
 A free piano helper for kids. Plug a USB MIDI keyboard into a computer, open the page, and play.
 
-**Try it:** https://sirmmo.github.io/openpiano/
+**Try it:** https://ingmmo.com/openpiano/
 
 No keyboard? It also works with the mouse, touch screens and the computer keyboard.
 
