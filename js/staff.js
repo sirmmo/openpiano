@@ -13,6 +13,9 @@
   const SP = 12; // staff space in SVG units
   const HS = SP / 2; // one diatonic step
   const ACC = { '-1': '♭', '1': '♯', '0': '♮' };
+  // Treble-staff steps of the key-signature accidentals (C4 = 28); the bass staff is two octaves lower.
+  const KS_SHARPS = [38, 35, 39, 36, 33, 37, 34]; // F5 C5 G5 D5 A4 E5 B4
+  const KS_FLATS = [34, 37, 33, 36, 32, 35, 31]; // B4 E5 A4 D5 G4 C5 F4
 
   /**
    * opts.clef: 'treble' | 'bass' | 'grand'
@@ -20,6 +23,8 @@
    *   { midi | midis: [...], spelled?: [{step, acc}], flat?, color?, colors?: [...], label?, cls? }
    * opts.width: SVG width in user units
    * opts.spacing: fixed distance between items (default: spread across the staff)
+   * opts.keySig: number of sharps (> 0) or flats (< 0) after the clef; accidentals
+   *   already in the key signature are then left off the notes
    */
   function render(opts) {
     const clef = opts.clef || 'treble';
@@ -44,7 +49,22 @@
     });
     if (staves.length === 2) out += '<line class="staff-line bar" x1="6" x2="6" y1="' + staves[0].top + '" y2="' + (staves[1].top + 4 * SP) + '"/>';
 
-    const x0 = 64, x1 = W - 18;
+    // Key signature: sharps F C G D A E B, flats B E A D G C F, at their usual heights.
+    const ks = opts.keySig || 0;
+    const keyAcc = [0, 0, 0, 0, 0, 0, 0]; // per letter C..B
+    if (ks) {
+      const n = Math.abs(ks);
+      const steps = ks > 0 ? KS_SHARPS : KS_FLATS;
+      for (let i = 0; i < n; i++) keyAcc[steps[i] % 7] = ks > 0 ? 1 : -1;
+      staves.forEach((s) => {
+        const shift = s.kind === 'bass' ? -14 : 0;
+        for (let i = 0; i < n; i++) {
+          out += '<text class="accidental key-acc" x="' + (50 + i * 10) + '" y="' + (yOf(steps[i] + shift, s) + (ks > 0 ? 6 : 4)) + '" text-anchor="middle">' + (ks > 0 ? '♯' : '♭') + '</text>';
+        }
+      });
+    }
+
+    const x0 = 64 + Math.abs(ks) * 10, x1 = W - 18;
     const gap = opts.spacing || (x1 - x0) / Math.max(1, items.length);
     items.forEach((n, i) => {
       const x = x0 + gap * (i + 0.5);
@@ -70,8 +90,9 @@
         const shifted = k > 0 && h.step - heads[k - 1].step === 1 && !heads[k - 1].shifted;
         h.shifted = shifted;
         const hx = shifted ? x + 14 : x;
-        if (h.acc) {
-          out += '<text class="accidental" x="' + (x - 12 - (accCount % 2) * 11) + '" y="' + (ny + 5) + '" text-anchor="end">' + ACC[h.acc] + '</text>';
+        const shown = opts.keySig != null ? (h.acc === keyAcc[((h.step % 7) + 7) % 7] ? null : h.acc) : h.acc || null;
+        if (shown != null) {
+          out += '<text class="accidental" x="' + (x - 12 - (accCount % 2) * 11) + '" y="' + (ny + 5) + '" text-anchor="end">' + ACC[shown] + '</text>';
           accCount++;
         }
         out += '<ellipse class="head" cx="' + hx + '" cy="' + ny + '" rx="7.6" ry="5.6" transform="rotate(-20 ' + hx + ' ' + ny + ')" style="fill:' + h.color + '"/>';

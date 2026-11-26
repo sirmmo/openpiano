@@ -92,6 +92,7 @@
     earL4: ['White and black keys', 'Tasti bianchi e neri'],
 
     modeChords: ['Chords', 'Accordi'],
+    modeTheory: ['Theory', 'Teoria'],
     rightHand: ['Right hand', 'Mano destra'],
     leftHand: ['Left hand', 'Mano sinistra'],
     withChords: ['+ chords', '+ accordi'],

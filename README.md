@@ -17,6 +17,14 @@ No keyboard? It also works with the mouse, touch screens and the computer keyboa
 - **Read notes** – 14 levels: middle C, treble lines and spaces, up high, bass clef, ledger lines, both clefs, sharps, flats, then *read a little melody* (play 4–6 notes from the staff).
 - **Listen & find** – 10 levels: hear a note and find it, *higher or lower?*, and echo games (hear 2–4 notes, play them back).
 - **Chords** – 14 levels: play named chords (C F G, minors, every key, inversions, sevenths, diminished/augmented/sus), read chords on the treble and bass staff, *major or minor?* by ear, and hear-a-chord-play-it.
+- **Theory** – seven short lessons with examples you can hear, in English and Italian:
+  - *Steps and intervals*: half and whole steps, all intervals with songs to remember them by; play two notes and the app names the interval.
+  - *Scales*: major, minor and pentatonic from any note, with the step pattern, the staff, and a *Your turn* play-along.
+  - *The circle of fifths*: a clickable wheel of all keys with relative minors, key signatures, the I–IV–V family, the order of sharps and flats and tricks to name a key. Play a chord and it lights up on the wheel.
+  - *Chords in a key*: the seven triads with Roman numerals, what each one does, and well-known progressions; chords you play light up.
+  - *Rhythm and time*: note values against a metronome, dots and rests, bars, time signatures (2/4, 3/4, 4/4, 6/8) and tempo words.
+  - *Melody*: steps and leaps, contour, the tonic, question-and-answer phrases, motifs and sequences.
+  - *Counterpoint*: rounds, consonance and dissonance, the four kinds of motion, Fux's note-against-note rules, and two-voice examples with the intervals marked.
 - After two wrong tries the right keys start to glow. Stars for every song and level, saved in the browser.
 - English and Italian; note names as C D E, Do Re Mi, or both.
 - Light and dark theme: follows the system by default; the sun/moon button in the top bar switches it, and Settings has Auto / Light / Dark.
@@ -96,13 +104,15 @@ js/i18n.js          English / Italian strings
 js/audio.js         sampled piano, synth fallback, sound effects
 js/midi.js          Web MIDI input/output
 js/keyboard.js      on-screen keyboard, mouse/touch/computer keys
-js/staff.js         SVG staff renderer
+js/staff.js         SVG staff renderer (with key signatures)
 js/score.js         scrolling score for the song player (canvas)
 js/songs.js         song book
 js/midifile.js      MIDI file reader/writer and saved-files library
 js/mode-free.js     free play and recording
 js/mode-songs.js    song player
 js/mode-quiz.js     exercises (Read notes, Listen & find, Chords)
+js/theory.js        keys, key signatures, spelled scales, intervals
+js/mode-theory.js   theory lessons
 js/main.js          app shell
 sounds/piano.js     piano samples (generated)
 ```
