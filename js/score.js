@@ -10,7 +10,7 @@
   const DOTTED = new Set([3, 1.5, 0.75, 0.375]);
   const STAVES = { treble: { lo: 30, hi: 38, mid: 34 }, bass: { lo: 18, hi: 26, mid: 22 } };
   const ACC = { '-1': '♭', '1': '♯' };
-  const INK = '#2b2238', PAPER = '#ffffff', ACCENT = '#6c4ee0';
+  let INK = '#2b2238', PAPER = '#ffffff', ACCENT = '#6c4ee0', MISS = '#a8a1b3'; // updated from the theme on every draw
   let G, F; // clef Path2D, made on first use
 
   /** The written value closest to a duration in beats. */
@@ -75,6 +75,9 @@
    */
   function draw(ctx, W, H, sc, o) {
     if (!G) { G = new Path2D(OP.staff.G_CLEF); F = new Path2D(OP.staff.F_CLEF); }
+    const th = OP.theme.colors;
+    INK = th.ink || INK; PAPER = th.paper || PAPER; ACCENT = th.accent || ACCENT;
+    MISS = th.dark ? '#5d5470' : '#a8a1b3';
     const grand = sc.clef === 'grand';
     const SP = Math.max(6, Math.min(20, H / (grand ? 19 : 10.5)));
     const HS = SP / 2, rx = SP * 0.64, ry = SP * 0.46;
@@ -157,8 +160,8 @@
       ctx.fillText(String(m.den), SP * 4.9, s.top + 3 * SP + 1);
     });
     const edge = ctx.createLinearGradient(left, 0, left + SP * 1.5, 0);
-    edge.addColorStop(0, 'rgba(255,255,255,1)');
-    edge.addColorStop(1, 'rgba(255,255,255,0)');
+    edge.addColorStop(0, PAPER);
+    edge.addColorStop(1, PAPER + '00');
     ctx.fillStyle = edge;
     ctx.fillRect(left, 0, SP * 1.5, H);
   }
@@ -175,7 +178,7 @@
       const len = h.n.dur * pxb - SP * 0.5;
       if (len <= rx) return;
       ctx.globalAlpha = fade * (h.n.state ? 0.15 : 0.3);
-      ctx.fillStyle = h.n.state === 'miss' ? '#a8a1b3' : OP.notes.color(h.n.midi);
+      ctx.fillStyle = h.n.state === 'miss' ? MISS : OP.notes.color(h.n.midi);
       roundRect(ctx, x, yy - SP * 0.3, len, SP * 0.6, SP * 0.3);
       ctx.fill();
     });
@@ -193,7 +196,7 @@
       const yy = yOf(h.step, s);
       const hx = x + (h.shifted ? rx * 1.85 : 0);
       const n = h.n;
-      const col = n.state === 'miss' ? '#a8a1b3' : OP.notes.color(n.midi);
+      const col = n.state === 'miss' ? MISS : OP.notes.color(n.midi);
       if (d.current && d.current.has(n) && !n.state) {
         ctx.globalAlpha = 0.35 + 0.25 * Math.sin(d.now / 160);
         ctx.fillStyle = col;

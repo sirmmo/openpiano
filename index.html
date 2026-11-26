@@ -7,6 +7,15 @@
   <meta name="description" content="A free piano helper for kids: plug in a USB MIDI keyboard, follow the falling notes, learn to read music.">
   <meta name="theme-color" content="#fff8ef">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <script>
+    // Pick the theme before the first paint, so a dark page never flashes white.
+    (function () {
+      var t = 'auto';
+      try { t = (JSON.parse(localStorage.getItem('openpiano.v1')) || {}).settings.theme || 'auto'; } catch (e) {}
+      if (t === 'auto') t = window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      document.documentElement.dataset.theme = t;
+    })();
+  </script>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -25,6 +34,10 @@
     <div class="tools">
       <span class="star-total" aria-label="Stars"><span class="star on" aria-hidden="true">★</span><b id="totalStars">0</b></span>
       <button id="midiBtn" class="pill" data-state="idle"><span class="dot" aria-hidden="true"></span><span id="midiText"></span></button>
+      <button id="themeBtn" class="icon-btn theme-btn" data-i18n-label="themeToggle">
+        <svg class="moon" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M20.2 14.6A8.5 8.5 0 0 1 9.4 3.8a8.5 8.5 0 1 0 10.8 10.8z"/></svg>
+        <svg class="sun" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.2" fill="currentColor" stroke="none"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></svg>
+      </button>
       <button id="settingsBtn" class="icon-btn" aria-label="Settings" data-i18n-label="settings">
         <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M19.4 13a7.6 7.6 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.4 7.4 0 0 0-1.7-1L15 3.3h-4l-.4 2.6a7.4 7.4 0 0 0-1.7 1l-2.5-1-2 3.5L6.6 11a7.6 7.6 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1c.5.4 1.1.7 1.7 1l.4 2.6h4l.4-2.6c.6-.3 1.2-.6 1.7-1l2.5 1 2-3.5zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" transform="translate(-1 0)"/></svg>
       </button>
@@ -127,6 +140,15 @@
           <label><input type="radio" name="noteNames" value="letters"><span data-i18n="namesLetters">C D E</span></label>
           <label><input type="radio" name="noteNames" value="solfege"><span data-i18n="namesSolfege">Do Re Mi</span></label>
           <label><input type="radio" name="noteNames" value="both"><span data-i18n="namesBoth">Both</span></label>
+        </div>
+      </fieldset>
+
+      <fieldset class="row">
+        <legend data-i18n="theme">Theme</legend>
+        <div class="seg">
+          <label><input type="radio" name="theme" value="auto"><span data-i18n="themeAuto">Auto</span></label>
+          <label><input type="radio" name="theme" value="light"><span data-i18n="themeLight">Light</span></label>
+          <label><input type="radio" name="theme" value="dark"><span data-i18n="themeDark">Dark</span></label>
         </div>
       </fieldset>
 

@@ -15,6 +15,7 @@
     size: window.innerWidth < 700 ? 25 : 37, // number of keys on screen
     midiOut: '', // MIDI output id used for demos ('' = this computer)
     midiGranted: false,
+    theme: 'auto', // 'auto' (follow the system) | 'light' | 'dark'
   };
 
   let data = {};

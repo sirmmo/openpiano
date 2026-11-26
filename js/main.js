@@ -157,6 +157,7 @@
     const s = OP.settings;
     const f = form.elements;
     f.lang.value = s.lang;
+    f.theme.value = s.theme;
     f.noteNames.value = s.noteNames;
     f.labels.checked = s.labels;
     f.instrument.value = s.instrument;
@@ -172,6 +173,7 @@
     const name = e.target.name;
     if (name === 'lang') { OP.store.set('lang', f.lang.value); refreshTexts(); }
     if (name === 'noteNames') { OP.store.set('noteNames', f.noteNames.value); refreshTexts(); }
+    if (name === 'theme') { OP.store.set('theme', f.theme.value); OP.theme.apply(f.theme.value); }
     if (name === 'labels') { OP.store.set('labels', f.labels.checked); kb.updateLabels(); }
     if (name === 'instrument') { OP.store.set('instrument', f.instrument.value); if (f.instrument.value === 'piano') OP.audio.loadPiano(); }
     if (name === 'midiSound') OP.store.set('midiSound', f.midiSound.checked);
@@ -183,6 +185,12 @@
     if (confirm(t('resetConfirm'))) { OP.store.resetProgress(); updateStars(); OP.emit('progress'); }
   });
   $('#settingsBtn').addEventListener('click', openSettings);
+  $('#themeBtn').addEventListener('click', () => {
+    const next = OP.theme.resolve(OP.settings.theme) === 'dark' ? 'light' : 'dark';
+    OP.store.set('theme', next);
+    OP.theme.apply(next);
+    if (dlg.open) form.elements.theme.value = next;
+  });
 
   function refreshTexts() {
     OP.applyI18n();
@@ -215,6 +223,7 @@
     if (OP.midi.supported && OP.midi.state === 'idle') OP.midi.request();
   });
 
+  OP.theme.apply(OP.settings.theme);
   OP.applyI18n();
   renderMidiPill();
   updateStars();

@@ -320,11 +320,11 @@
       box.hidden = false;
       let items;
       if (L.kind === 'note') {
-        items = [{ midi: Q.answer, flat: L.flat, color: reveal ? N().color(Q.answer) : '#2b2238', cls: reveal ? 'ok' : '', label: reveal ? N().shortName(Q.answer, L.flat) : '' }];
+        items = [{ midi: Q.answer, flat: L.flat, color: reveal ? N().color(Q.answer) : 'var(--ink)', cls: reveal ? 'ok' : '', label: reveal ? N().shortName(Q.answer, L.flat) : '' }];
       } else if (L.kind === 'seq') {
-        items = Q.seq.map((m, i) => ({ midi: m, color: i < idx ? N().color(m) : '#2b2238', cls: i === idx ? 'cur' : i < idx ? 'ok' : '', label: i < idx ? N().shortName(m) : '' }));
+        items = Q.seq.map((m, i) => ({ midi: m, color: i < idx ? N().color(m) : 'var(--ink)', cls: i === idx ? 'cur' : i < idx ? 'ok' : '', label: i < idx ? N().shortName(m) : '' }));
       } else {
-        items = [{ midis: Q.voicing, spelled: Q.spelled, colors: reveal ? Q.voicing.map(N().color) : null, color: '#2b2238', cls: reveal ? 'ok' : '', label: reveal ? C().symbol(Q.rootPc, Q.type) : '' }];
+        items = [{ midis: Q.voicing, spelled: Q.spelled, colors: reveal ? Q.voicing.map(N().color) : null, color: 'var(--ink)', cls: reveal ? 'ok' : '', label: reveal ? C().symbol(Q.rootPc, Q.type) : '' }];
       }
       const width = L.kind === 'seq' ? 120 + Q.seq.length * 48 : 260;
       box.style.width = 'min(' + (width * 1.45) + 'px, 92vw)';

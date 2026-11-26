@@ -378,17 +378,19 @@
     const pxb = Math.max(46, Math.min(120, H / 5.5)); // pixels per beat
     const hitY = H - 4;
     const font = getComputedStyle(document.body).fontFamily;
+    const th = OP.theme.colors;
+    const laneTint = th.dark ? '255,255,255' : '60,40,90';
 
     // Lanes: a faint line at every C, shaded black-key lanes.
     for (let m = kb.lo; m <= kb.hi; m++) {
       const g = kb.keyGeom(m);
       if (!g) continue;
-      if (g.black) { ctx.fillStyle = 'rgba(60,40,90,0.04)'; ctx.fillRect((g.x / 100) * W, 0, (g.w / 100) * W, H); }
-      if (N().pc(m) === 0) { ctx.fillStyle = 'rgba(60,40,90,0.10)'; ctx.fillRect((g.x / 100) * W, 0, 1, H); }
+      if (g.black) { ctx.fillStyle = 'rgba(' + laneTint + ',0.04)'; ctx.fillRect((g.x / 100) * W, 0, (g.w / 100) * W, H); }
+      if (N().pc(m) === 0) { ctx.fillStyle = 'rgba(' + laneTint + ',0.10)'; ctx.fillRect((g.x / 100) * W, 0, 1, H); }
     }
 
     // Hit line, glowing in the colour of the next note.
-    ctx.fillStyle = g0 ? N().color(g0.notes[0].midi) : '#c9bfd9';
+    ctx.fillStyle = g0 ? N().color(g0.notes[0].midi) : th.line;
     ctx.globalAlpha = waiting ? 0.55 + 0.45 * Math.sin(now / 160) : 0.8;
     ctx.fillRect(0, hitY - 2, W, 4);
     ctx.globalAlpha = 1;
@@ -406,12 +408,12 @@
       const col = N().color(n.midi);
       if (n.play) {
         ctx.globalAlpha = n.state === 'hit' ? 0.28 : n.state === 'miss' ? 0.25 : 1;
-        ctx.fillStyle = n.state === 'miss' ? '#a8a1b3' : col;
+        ctx.fillStyle = n.state === 'miss' ? (th.dark ? '#5d5470' : '#a8a1b3') : col;
         rr(x, top, w, h, 9);
         ctx.fill();
         const isCur = current.has(n) && !n.state;
         ctx.lineWidth = isCur ? 3 : 1.5;
-        ctx.strokeStyle = isCur ? '#2b2238' : N().shade(col, 0.7);
+        ctx.strokeStyle = isCur ? th.ink : N().shade(col, 0.7);
         ctx.stroke();
       } else {
         // The app plays these: pale, so the child knows they are not theirs.

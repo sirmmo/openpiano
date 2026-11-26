@@ -19,6 +19,7 @@ No keyboard? It also works with the mouse, touch screens and the computer keyboa
 - **Chords** – 14 levels: play named chords (C F G, minors, every key, inversions, sevenths, diminished/augmented/sus), read chords on the treble and bass staff, *major or minor?* by ear, and hear-a-chord-play-it.
 - After two wrong tries the right keys start to glow. Stars for every song and level, saved in the browser.
 - English and Italian; note names as C D E, Do Re Mi, or both.
+- Light and dark theme: follows the system by default; the sun/moon button in the top bar switches it, and Settings has Auto / Light / Dark.
 
 ## MIDI
 
