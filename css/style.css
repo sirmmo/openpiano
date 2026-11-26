@@ -166,6 +166,14 @@ h1, h2 { margin: 0; line-height: 1.15; }
 .speed output { min-width: 3.2em; font-variant-numeric: tabular-nums; color: var(--ink-2); }
 .progress { height: 6px; background: #efe6da; }
 .progress > div { height: 100%; width: 0; background: linear-gradient(90deg, #ff6b6b, #ffd43b, #69db7c, #4dabf7, #b197fc); transition: width .2s; }
+.stage-wrap { --score-h: clamp(150px, 36%, 250px); position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.stage-wrap[data-clef="grand"] { --score-h: clamp(200px, 50%, 330px); }
+.score-wrap { position: relative; flex: none; height: var(--score-h); background: var(--paper); border-bottom: 2px solid var(--line); }
+.stage-wrap[data-view="both"] .lane-score { top: calc(var(--score-h) + 10px); }
+.stage-wrap[data-view="both"] .lane-msg { top: calc(var(--score-h) + (100% - var(--score-h)) * .4); }
+.score-wrap canvas { position: absolute; inset: 0; display: block; }
+.stage-wrap[data-view="score"] .score-wrap { flex: 1; height: auto; border-bottom: 0; }
+.stage-wrap[data-view="score"] .lane-wrap, .stage-wrap[data-view="lane"] .score-wrap { display: none; }
 .lane-wrap {
   position: relative; flex: 1; min-height: 0;
   background: linear-gradient(#fff8ef, #fbefe0);
@@ -245,6 +253,23 @@ h1, h2 { margin: 0; line-height: 1.15; }
 .part-chip[data-role="mute"] .part-name { opacity: .45; text-decoration: line-through; }
 .key.white.auto { background: color-mix(in srgb, var(--c) 28%, #fff); }
 .key.black.auto { background: color-mix(in srgb, var(--c) 45%, #2b2238); }
+
+.view-btn { display: inline-flex; align-items: center; gap: 6px; }
+.btn.icon-only { padding-left: 10px; padding-right: 10px; display: inline-flex; align-items: center; }
+.badge.rec { background: #ffe3e3; color: var(--bad); }
+
+/* ---------- recording ---------- */
+.rec-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 14px; }
+.btn.rec { display: inline-flex; align-items: center; gap: 8px; min-width: 8.5em; justify-content: center; }
+.rec-dot { width: 14px; height: 14px; border-radius: 50%; background: var(--bad); flex: none; }
+.btn.rec.on { background: var(--bad); border-color: var(--bad); color: #fff; }
+.btn.rec.on .rec-dot { background: #fff; border-radius: 3px; animation: rec-blink 1s steps(2, start) infinite; }
+.btn.rec.count { background: var(--gold); border-color: var(--gold); color: var(--ink); }
+.btn.rec.count .rec-dot { background: var(--ink); }
+@keyframes rec-blink { to { opacity: .35; } }
+.rec-info { font-weight: 800; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.rec-done { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 10px; background: var(--paper); border: 2px solid var(--line); border-radius: var(--radius); padding: 10px 12px; box-shadow: 0 4px 0 var(--line); }
+.rec-done-text { font-weight: 800; flex: 1 1 100%; }
 
 /* ---------- exercises: extra ---------- */
 .level-section { font-size: 1.05rem; font-weight: 900; color: var(--ink-2); margin: 22px 0 10px; text-transform: uppercase; letter-spacing: .04em; }
@@ -380,7 +405,8 @@ select { font: inherit; font-weight: 700; padding: 6px 10px; border-radius: 10px
   .tab { padding: 8px 9px; }
   .player-title { width: 100%; order: -1; font-size: 1rem; }
   .speed input { width: 70px; }
-  .speed > span, #restartBtn span { display: none; }
+  .speed > span, #restartBtn span, #viewLabel, #dlBtn { display: none; }
+  .stage-wrap[data-clef="grand"] { --score-h: clamp(150px, 55%, 330px); }
   .player-bar, .quiz-bar { padding: 6px 10px; }
 }
 @media (prefers-reduced-motion: reduce) {

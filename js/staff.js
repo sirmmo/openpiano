@@ -82,5 +82,5 @@
     return out + '</svg>';
   }
 
-  OP.staff = { render };
+  OP.staff = { render, G_CLEF, F_CLEF };
 })();

@@ -183,6 +183,7 @@
     bad: () => blips([50, 47], 0.09, { vel: 50, wave: 'triangle', len: 0.1 }),
     fanfare: () => blips([72, 76, 79, 84, 79, 84], 0.12, { vel: 70, wave: 'triangle', len: 0.18 }),
     tick: () => blips([96], 0, { vel: 40, len: 0.03 }),
+    tock: () => blips([103], 0, { vel: 75, len: 0.04 }), // the first beat of a bar
   };
 
   OP.audio = {

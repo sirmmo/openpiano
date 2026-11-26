@@ -41,6 +41,18 @@
           <div id="freeOctave" class="free-octave"></div>
         </div>
         <div class="free-side">
+          <div class="rec-bar">
+            <button id="recBtn" class="btn rec"><span class="rec-dot" aria-hidden="true"></span><span id="recLabel" data-i18n="record">Record</span></button>
+            <label class="switch"><input type="checkbox" id="metroToggle"><span class="track" aria-hidden="true"></span><span data-i18n="metronome">Metronome</span></label>
+            <label class="speed"><span data-i18n="tempo">Tempo</span> <input type="range" id="tempoRange" min="50" max="140" step="5"> <output id="tempoVal"></output></label>
+            <span id="recInfo" class="rec-info"></span>
+          </div>
+          <div id="recDone" class="rec-done" hidden>
+            <span class="rec-done-text"></span>
+            <button class="btn primary" data-act="open" data-i18n="seeIt">See it and play it</button>
+            <button class="btn" data-act="download" data-i18n="download">Download .mid</button>
+            <button class="btn ghost danger" data-act="discard" data-i18n="discard">Delete</button>
+          </div>
           <p id="freeHint" class="free-hint"><strong data-i18n="freeHint">Play any key!</strong> <span data-i18n="freeSub"></span></p>
           <div id="freeStaff" class="staff-box"></div>
         </div>
@@ -66,12 +78,15 @@
             <button id="restartBtn" class="btn ghost">↺ <span data-i18n="restart">From the top</span></button>
             <label class="switch"><input type="checkbox" id="waitToggle"><span class="track" aria-hidden="true"></span><span data-i18n="waitMode">Wait for me</span></label>
             <label class="speed"><span data-i18n="speed">Speed</span> <input type="range" id="speedRange" min="0.5" max="1.5" step="0.1"> <output id="speedVal"></output></label>
+            <button id="viewBtn" class="btn ghost view-btn" data-i18n-label="viewHint"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 5h20M2 9h20M2 13h20M2 17h20"/><ellipse cx="9" cy="15" rx="2.6" ry="1.9" transform="rotate(-20 9 15)" fill="currentColor" stroke="none"/><path d="M11.4 14.6V5" stroke-width="1.8"/></svg><span id="viewLabel"></span></button>
+            <button id="dlBtn" class="btn ghost icon-only" data-i18n-label="download"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10.5l5 5 5-5M5 20h14"/></svg></button>
           </div>
         </div>
         <div id="partsBar" class="parts-bar" hidden></div>
         <div class="progress"><div id="songProgress"></div></div>
-        <div class="lane-wrap">
-          <canvas id="lane"></canvas>
+        <div id="stageWrap" class="stage-wrap">
+          <div class="score-wrap"><canvas id="score"></canvas></div>
+          <div class="lane-wrap"><canvas id="lane"></canvas></div>
           <div id="songOops" class="lane-score"></div>
           <div id="playerMsg" class="lane-msg"></div>
           <div id="songResult" class="result" hidden>
@@ -174,6 +189,7 @@
   <script src="js/midi.js"></script>
   <script src="js/keyboard.js"></script>
   <script src="js/staff.js"></script>
+  <script src="js/score.js"></script>
   <script src="js/songs.js"></script>
   <script src="js/midifile.js"></script>
   <script src="js/mode-free.js"></script>

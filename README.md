@@ -11,7 +11,9 @@ No keyboard? It also works with the mouse, touch screens and the computer keyboa
 - **Free play** – every note gets a big name, its own colour and its place on a grand staff. Play several keys together and they stack up as a chord on the staff, with its name and inversion (C major · 1st inversion).
 - **Songs** – notes fall onto the keys, Synthesia-style, with finger numbers. In *Wait for me* mode the song stops at each note or chord until the child presses all of its keys. *Listen* plays the song first; speed goes from 50% to 150%. Fourteen traditional songs, from a five-finger warm-up to Jingle Bells; seven of them have a left-hand chord part, plus two chord pieces (block chords C–F–G and broken chords).
 - **Parts** – every song is split into parts (right hand, left hand, or MIDI tracks). Tap a part to choose who plays it: *You play*, *Piano plays* (the app accompanies) or *Off*. Start with the right hand while the app plays the chords, then swap, then both hands.
-- **Your own MIDI files** – open a `.mid` file (or drop it on the Songs page) and it becomes a song: tracks become parts, tempo changes are followed, drums are skipped, and the melody track is picked for the child to play. Files are kept in the browser for next time.
+- **Score view** – while a song plays, the music also scrolls by on a real staff (treble, bass or grand staff as needed) past a play line: note values, dots, flags, bar lines, time signature, and a soft bar showing how long to hold each note. Choose *Notes + score*, *Score* only, or *Falling notes* only.
+- **Your own MIDI files** – open a `.mid` file (or drop it on the Songs page) and it becomes a song: tracks become parts, tempo and time-signature changes are followed, drums are skipped, and the melody track is picked for the child to play. Files are kept in the browser for next time. Any song can be downloaded as a `.mid`.
+- **Record** – in Free play, press *Record* and play (optionally with a metronome and a one-bar count-in). The recording is tidied to the nearest sixteenth note, saved under *My MIDI files and recordings*, and opens in the player: see it on the score, listen back, play it again, or download it as a `.mid`.
 - **Read notes** – 14 levels: middle C, treble lines and spaces, up high, bass clef, ledger lines, both clefs, sharps, flats, then *read a little melody* (play 4–6 notes from the staff).
 - **Listen & find** – 10 levels: hear a note and find it, *higher or lower?*, and echo games (hear 2–4 notes, play them back).
 - **Chords** – 14 levels: play named chords (C F G, minors, every key, inversions, sevenths, diminished/augmented/sus), read chords on the treble and bass staff, *major or minor?* by ear, and hear-a-chord-play-it.
@@ -77,6 +79,7 @@ Songs live in [`js/songs.js`](js/songs.js) in a short text notation:
 - `[C]`, `[F]`, `[G]`, `[G7]`, `[Am]`, `[Dm]` are ready-made left-hand chord shapes.
 - `hand` is the key under the right thumb: finger numbers are added for notes inside that five-finger position.
 - `left` is optional; by default the app plays it and the child plays `notes`.
+- `meter: [3, 4]` sets the time signature (default 4/4); `pickup: 1` starts with a one-beat pickup bar.
 
 Please only add melodies that are in the public domain. Anything else can be loaded as a MIDI file instead.
 
@@ -93,9 +96,10 @@ js/audio.js         sampled piano, synth fallback, sound effects
 js/midi.js          Web MIDI input/output
 js/keyboard.js      on-screen keyboard, mouse/touch/computer keys
 js/staff.js         SVG staff renderer
+js/score.js         scrolling score for the song player (canvas)
 js/songs.js         song book
-js/midifile.js      MIDI file reader and saved-files library
-js/mode-free.js     free play
+js/midifile.js      MIDI file reader/writer and saved-files library
+js/mode-free.js     free play and recording
 js/mode-songs.js    song player
 js/mode-quiz.js     exercises (Read notes, Listen & find, Chords)
 js/main.js          app shell

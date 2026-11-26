@@ -85,7 +85,7 @@
       notes: 'C4@1 E4@3 G4@5 E4@3 | C4@1 F4@3 A4@5 F4@3 | B3@1 D4@2 G4@5 D4@2 | C4/2@1 E4/2@3 | A3@1 C4@2 E4@4 C4@2 | D4@1 F4@2 A4@4 F4@2 | B3@1 D4@2 G4@5 D4@2 | C4/4@1',
     },
     {
-      id: 'row', level: 3, bpm: 90, hand: 'C4',
+      id: 'row', level: 3, bpm: 90, hand: 'C4', meter: [6, 8],
       title: ['Row, Row, Row Your Boat', 'Rema, rema la barchetta'],
       notes: 'C4/1.5 C4/1.5 | C4 D4/.5 E4/1.5 | E4 D4/.5 E4 F4/.5 | G4/3 | C5/.5 C5/.5 C5/.5 G4/.5 G4/.5 G4/.5 | E4/.5 E4/.5 E4/.5 C4/.5 C4/.5 C4/.5 | G4 F4/.5 E4 D4/.5 | C4/3',
       left: '[C]/3 | [C]/3 | [C]/3 | [C]/3 | [C]/3 | [C]/3 | [G]/3 | [C]/3',
@@ -97,7 +97,7 @@
       left: '[C]/4 | [C]/4 | [C]/4 | [C]/4 | [F]/4 | [C]/4 | [G]/4 | [G7]/4 | [C]/4 | [C]/4 | [C]/4 | [C]/4 | [F]/4 | [C]/4 | [G7]/4 | [C]/4',
     },
     {
-      id: 'birthday', level: 3, bpm: 100, hand: null,
+      id: 'birthday', level: 3, bpm: 100, hand: null, meter: [3, 4], pickup: 1,
       title: ['Happy Birthday', 'Tanti auguri'],
       notes: 'G3/.75 G3/.25 | A3 G3 C4 | B3/2 G3/.75 G3/.25 | A3 G3 D4 | C4/2 G3/.75 G3/.25 | G4 E4 C4 | B3 A3 F4/.75 F4/.25 | E4 C4 D4 | C4/3',
     },
@@ -145,14 +145,42 @@
     const parts = [{ key: 'right', notes: parseLine(song.notes, song.hand), role: 'play' }];
     if (song.left) parts.push({ key: 'left', notes: parseLine(song.left, null), role: 'listen' });
     const length = Math.max(...parts.map((p) => Math.max(...p.notes.map((n) => n.start + n.dur))));
-    song.model = { id: 'song:' + song.id, title: song.title, tempos: [{ beat: 0, bpm: song.bpm }], parts, length, level: song.level };
+    const [num, den] = song.meter || [4, 4];
+    song.model = {
+      id: 'song:' + song.id, title: song.title, tempos: [{ beat: 0, bpm: song.bpm }],
+      meters: [{ beat: 0, num, den }], pickup: song.pickup || 0, parts, length, level: song.level,
+    };
     return song.model;
+  }
+
+  /** Time signature in effect at a beat. */
+  function meterAt(m, beat) {
+    const list = m.meters || [];
+    let cur = list[0] || { beat: 0, num: 4, den: 4 };
+    for (const x of list) { if (x.beat <= beat) cur = x; else break; }
+    return cur;
+  }
+
+  /** Beats where bar lines go (a pickup bar shifts the first one). */
+  function bars(m) {
+    const list = m.meters && m.meters.length ? m.meters : [{ beat: 0, num: 4, den: 4 }];
+    const out = [];
+    list.forEach((x, i) => {
+      const len = (x.num * 4) / x.den;
+      const end = i + 1 < list.length ? list[i + 1].beat : m.length + 0.01;
+      let b = x.beat + (i === 0 && m.pickup ? m.pickup : i === 0 ? len : 0);
+      const last = i === list.length - 1;
+      for (; (last ? b <= end : b < end - 1e-6) && out.length < 20000; b += len) out.push(b);
+    });
+    return out;
   }
 
   OP.songs = {
     list: SONGS,
     model,
     parseLine,
+    meterAt,
+    bars,
     title: (s) => (Array.isArray(s.title) ? s.title[OP.settings.lang === 'it' ? 1 : 0] : s.title),
     partName: (p) => (p.key === 'right' ? OP.t('rightHand') : p.key === 'left' ? OP.t('leftHand') : p.name),
   };

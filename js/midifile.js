@@ -44,11 +44,14 @@
         if (st === 0xff) {
           const type = u8(), l = vlq();
           if (type === 0x51 && l === 3) events.push({ tick, type: 'tempo', us: (d.getUint8(p) << 16) | (d.getUint8(p + 1) << 8) | d.getUint8(p + 2) });
+          else if (type === 0x58 && l >= 2) events.push({ tick, type: 'timesig', num: d.getUint8(p), den: Math.pow(2, d.getUint8(p + 1)) });
+          else if (type === 0x59 && l >= 1) events.push({ tick, type: 'keysig', sf: d.getInt8(p) });
           else if ((type === 0x03 || type === 0x04) && !name) name = decodeText(new Uint8Array(buf, p, l));
           p += l;
           if (type === 0x2f) break;
         } else if (st === 0xf0 || st === 0xf7) {
-          p += vlq();
+          const l = vlq(); // not "p += vlq()": that would add to p as it was before reading the length
+          p += l;
         } else {
           running = st;
           const cmd = st & 0xf0, ch = st & 0x0f;
@@ -73,9 +76,22 @@
   function toModel(midi, title, id) {
     const ppq = midi.ppq;
     const tempos = [];
-    midi.tracks.forEach((t) => t.events.forEach((e) => { if (e.type === 'tempo') tempos.push({ beat: e.tick / ppq, bpm: 60e6 / e.us }); }));
+    midi.tracks.forEach((t) => t.events.forEach((e) => { if (e.type === 'tempo') tempos.push({ beat: e.tick / ppq, bpm: Math.round(6e10 / e.us) / 1000 }); }));
     tempos.sort((a, b) => a.beat - b.beat);
     if (!tempos.length || tempos[0].beat > 0) tempos.unshift({ beat: 0, bpm: tempos.length ? tempos[0].bpm : 120 });
+    const meters = [];
+    let flat = null;
+    midi.tracks.forEach((t) => t.events.forEach((e) => {
+      if (e.type === 'timesig' && e.num > 0) meters.push({ beat: e.tick / ppq, num: e.num, den: e.den });
+      if (e.type === 'keysig' && flat == null) flat = e.sf < 0;
+    }));
+    meters.sort((a, b) => a.beat - b.beat);
+    const uniq = [];
+    meters.forEach((m) => {
+      const prev = uniq[uniq.length - 1];
+      if (prev && m.beat - prev.beat < 1e-6) Object.assign(prev, m); else uniq.push(m);
+    });
+    if (!uniq.length || uniq[0].beat > 0) uniq.unshift({ beat: 0, num: uniq.length ? uniq[0].num : 4, den: uniq.length ? uniq[0].den : 4 });
 
     const parts = [];
     midi.tracks.forEach((t, ti) => {
@@ -116,7 +132,64 @@
     pick.role = 'play';
 
     const length = Math.max(...parts.map((p) => Math.max(...p.notes.map((n) => n.start + n.dur))));
-    return { id: 'midi:' + id, title, tempos, parts, length, level: 0, midi: true };
+    return { id: 'midi:' + id, title, tempos, meters: uniq, pickup: 0, flat: !!flat, parts, length, level: 0, midi: true };
+  }
+
+  /** Write a song model as a Standard MIDI File (format 1, one track per part). */
+  function write(model) {
+    const PPQ = 480;
+    const tick = (beat) => Math.max(0, Math.round(beat * PPQ));
+    const vlq = (v) => { const s = [v & 0x7f]; while ((v >>= 7) > 0) s.unshift((v & 0x7f) | 0x80); return s; };
+    const meta = (type, bytes) => [0xff, type, ...vlq(bytes.length), ...bytes];
+    const text = (str) => Array.from(new TextEncoder().encode(String(str)));
+    const chunk = (id, body) => [...text(id), (body.length >>> 24) & 255, (body.length >>> 16) & 255, (body.length >>> 8) & 255, body.length & 255, ...body];
+    const track = (evs) => {
+      evs.sort((a, b) => a.tick - b.tick || a.order - b.order);
+      const out = [];
+      let last = 0;
+      evs.forEach((e) => { out.push(...vlq(e.tick - last), ...e.data); last = e.tick; });
+      out.push(0, 0xff, 0x2f, 0);
+      return chunk('MTrk', out);
+    };
+    const title = OP.songs ? OP.songs.title(model) : model.title;
+    const conductor = [{ tick: 0, order: 0, data: meta(0x03, text(title)) }];
+    (model.tempos || [{ beat: 0, bpm: 120 }]).forEach((tp) => {
+      const us = Math.round(60e6 / tp.bpm);
+      conductor.push({ tick: tick(tp.beat), order: 1, data: meta(0x51, [(us >> 16) & 255, (us >> 8) & 255, us & 255]) });
+    });
+    (model.meters || [{ beat: 0, num: 4, den: 4 }]).forEach((m) => {
+      conductor.push({ tick: tick(m.beat), order: 1, data: meta(0x58, [m.num, Math.round(Math.log2(m.den)), 24, 8]) });
+    });
+    if (model.flat) conductor.push({ tick: 0, order: 1, data: meta(0x59, [0xff, 0]) });
+    const tracks = [track(conductor)];
+    model.parts.forEach((p, i) => {
+      const ch = i < 9 ? i : Math.min(15, i + 1); // channel 10 is for drums
+      const evs = [
+        { tick: 0, order: 0, data: meta(0x03, text(OP.songs ? OP.songs.partName(p) : p.name || 'Piano')) },
+        { tick: 0, order: 1, data: [0xc0 | ch, 0] },
+      ];
+      p.notes.forEach((n) => {
+        const on = tick(n.start), off = Math.max(on + 1, tick(n.start + n.dur));
+        evs.push({ tick: on, order: 3, data: [0x90 | ch, n.midi, Math.max(1, Math.min(127, n.vel || 90))] });
+        evs.push({ tick: off, order: 2, data: [0x80 | ch, n.midi, 0] }); // a note-off goes before a note-on at the same tick
+      });
+      tracks.push(track(evs));
+    });
+    const head = chunk('MThd', [0, 1, (tracks.length >> 8) & 255, tracks.length & 255, (PPQ >> 8) & 255, PPQ & 255]);
+    return new Uint8Array([].concat(head, ...tracks)).buffer;
+  }
+
+  /** Save a song model to the computer as a .mid file. */
+  function download(model) {
+    const blob = new Blob([write(model)], { type: 'audio/midi' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    const name = (OP.songs ? OP.songs.title(model) : model.title) || 'openpiano';
+    a.download = name.replace(/[\\/:*?"<>|]+/g, '-').trim() + '.mid';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   }
 
   /* ---------- library of imported files ---------- */
@@ -144,17 +217,20 @@
   OP.midiFile = {
     parse,
     toModel,
+    write,
+    download,
     library: {
-      list: () => readLib().map(({ id, title }) => ({ id, title })),
+      list: () => readLib().map(({ id, title, rec }) => ({ id, title, rec: !!rec })),
       /** Parse and keep a file; returns { model, saved }. Throws if the file is not usable. */
-      add(title, buf) {
+      add(title, buf, rec) {
         const id = Date.now().toString(36);
         const model = toModel(parse(buf), title, id);
+        if (rec) model.rec = true;
         cache.set(id, model);
         let saved = true;
         try {
           const list = readLib();
-          list.push({ id, title, data: toBase64(buf) });
+          list.push(rec ? { id, title, rec: true, data: toBase64(buf) } : { id, title, data: toBase64(buf) });
           if (JSON.stringify(list).length > MAX_BYTES) throw new Error('full');
           writeLib(list);
         } catch (e) { saved = false; }
@@ -165,6 +241,7 @@
         const e = readLib().find((x) => x.id === id);
         if (!e) return null;
         const model = toModel(parse(fromBase64(e.data)), e.title, id);
+        if (e.rec) model.rec = true;
         cache.set(id, model);
         return model;
       },

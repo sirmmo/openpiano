@@ -14,10 +14,11 @@
   const WINDOW = 0.4; // beats: timing window in play-along mode
   const CHORD_GAP = 0.08; // beats: notes starting this close together form one chord
 
-  let model = null, roles = [];
+  let model = null, roles = [], score = null, bars = [];
   let notes = [], playNotes = [], autoNotes = [], groups = [];
   let gi = 0, autoIdx = 0, time = 0, state = 'ready', mistakes = 0, hits = 0;
   let canvas, ctx, W = 0, H = 0, dpr = 1, raf = 0, last = 0;
+  let scanvas, sctx, SW = 0, SH = 0;
   let particles = [];
   let active = false;
 
@@ -25,6 +26,8 @@
   if (S.speed == null) S.speed = 1;
   if (S.waitMode == null) S.waitMode = true;
   if (!S.roles) S.roles = {};
+  if (!S.view) S.view = 'both'; // 'both' | 'score' | 'lane'
+  const VIEWS = ['both', 'score', 'lane'];
 
   const starHtml = (n) => [1, 2, 3].map((i) => '<span class="star' + (i <= n ? ' on' : '') + '">★</span>').join('');
 
@@ -66,7 +69,7 @@
     mine.appendChild(add);
     OP.midiFile.library.list().forEach((e) => {
       const b = card(null, e.title, {
-        top: '<span class="song-level"><span class="badge">MIDI</span></span>',
+        top: '<span class="song-level">' + (e.rec ? '<span class="badge rec">● ' + t('recBadge') + '</span>' : '<span class="badge">MIDI</span>') + '</span>',
         bottom: '<span class="stars">' + starHtml(OP.store.stars('midi:' + e.id)) + '</span><button class="card-x" aria-label="' + t('remove') + '" title="' + t('remove') + '">×</button>',
       });
       const go = () => {
@@ -115,7 +118,9 @@
     $('#songPicker').hidden = true;
     $('#songPlayer').hidden = false;
     $('#songTitle').textContent = OP.songs.title(m);
+    bars = OP.songs.bars(m);
     renderParts();
+    applyView();
     fit();
     resize();
     reset();
@@ -155,9 +160,13 @@
     notes = [];
     model.parts.forEach((p, pi) => {
       if (roles[pi] === 'mute') return;
-      p.notes.forEach((n) => notes.push(Object.assign({}, n, { part: pi, play: roles[pi] === 'play', state: '' })));
+      const hand = p.key === 'right' || p.key === 'left' ? p.key : null;
+      p.notes.forEach((n) => notes.push(Object.assign({}, n, { part: pi, hand, play: roles[pi] === 'play', state: '' })));
     });
     notes.sort((a, b) => a.start - b.start || a.midi - b.midi);
+    score = OP.score.prepare(notes, model.flat);
+    const wrap = $('#stageWrap');
+    if (wrap.dataset.clef !== score.clef) { wrap.dataset.clef = score.clef; resize(); }
     playNotes = notes.filter((n) => n.play);
     autoNotes = notes.filter((n) => !n.play);
     groups = [];
@@ -170,7 +179,7 @@
     autoIdx = 0;
     mistakes = 0;
     hits = 0;
-    time = -LEAD_IN;
+    time = (notes.length ? Math.max(0, notes[0].start) : 0) - LEAD_IN; // skip a silent intro
     state = 'ready';
     particles = [];
     $('#songResult').hidden = true;
@@ -190,6 +199,14 @@
     $('#waitToggle').checked = S.waitMode;
     $('#speedRange').value = S.speed;
     $('#speedVal').textContent = Math.round(S.speed * 100) + '%';
+    $('#viewLabel').textContent = t('view_' + S.view);
+    $('#dlBtn').title = t('download');
+  }
+
+  function applyView() {
+    $('#stageWrap').dataset.view = S.view;
+    $('#viewLabel').textContent = t('view_' + S.view);
+    resize();
   }
 
   function updateTarget() {
@@ -221,7 +238,7 @@
     if (state === 'demo') { reset(); return; }
     reset();
     state = 'demo';
-    time = Math.min(0, notes.length ? notes[0].start - 1 : 0);
+    time = notes.length ? notes[0].start - 1 : 0;
     autoIdx = 0;
     setMsg('');
     updateButtons();
@@ -340,6 +357,21 @@
   }
 
   function draw(now) {
+    const g0 = groups[gi];
+    const waiting = state === 'playing' && S.waitMode && g0 && time >= g0.start;
+    if (S.view !== 'lane' && SW > 0) {
+      sctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      OP.score.draw(sctx, SW, SH, score, {
+        time, bars, now, waiting,
+        meterAt: (b) => OP.songs.meterAt(model, b),
+        current: new Set(state === 'demo' ? [] : g0 ? g0.notes : []),
+        font: getComputedStyle(document.body).fontFamily,
+      });
+    }
+    if (S.view !== 'score' && W > 0) drawLane(now, g0, waiting);
+  }
+
+  function drawLane(now, g0, waiting) {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, W, H);
     const kb = OP.app.kb;
@@ -356,8 +388,6 @@
     }
 
     // Hit line, glowing in the colour of the next note.
-    const g0 = groups[gi];
-    const waiting = state === 'playing' && S.waitMode && g0 && time >= g0.start;
     ctx.fillStyle = g0 ? N().color(g0.notes[0].midi) : '#c9bfd9';
     ctx.globalAlpha = waiting ? 0.55 + 0.45 * Math.sin(now / 160) : 0.8;
     ctx.fillRect(0, hitY - 2, W, 4);
@@ -452,16 +482,24 @@
 
   function stop() { cancelAnimationFrame(raf); }
 
+  function sizeCanvas(c) {
+    const r = c.parentElement.getBoundingClientRect();
+    c.width = Math.round(r.width * dpr);
+    c.height = Math.round(r.height * dpr);
+    c.style.width = r.width + 'px';
+    c.style.height = r.height + 'px';
+    return r;
+  }
+
   function resize() {
     if (!canvas || $('#songPlayer').hidden) return;
-    const r = canvas.parentElement.getBoundingClientRect();
     dpr = window.devicePixelRatio || 1;
+    const r = sizeCanvas(canvas);
     W = r.width;
     H = r.height;
-    canvas.width = Math.round(W * dpr);
-    canvas.height = Math.round(H * dpr);
-    canvas.style.width = W + 'px';
-    canvas.style.height = H + 'px';
+    const sr = sizeCanvas(scanvas);
+    SW = sr.width;
+    SH = sr.height;
   }
 
   /* ---------- wiring ---------- */
@@ -471,6 +509,13 @@
     wired = true;
     canvas = $('#lane');
     ctx = canvas.getContext('2d');
+    scanvas = $('#score');
+    sctx = scanvas.getContext('2d');
+    $('#viewBtn').addEventListener('click', () => {
+      OP.store.set('view', VIEWS[(VIEWS.indexOf(S.view) + 1) % VIEWS.length]);
+      applyView();
+    });
+    $('#dlBtn').addEventListener('click', () => { if (model) OP.midiFile.download(model); });
     $('#backBtn').addEventListener('click', showPicker);
     $('#playBtn').addEventListener('click', start);
     $('#listenBtn').addEventListener('click', listen);
@@ -505,6 +550,9 @@
       if (state === 'ready' || state === 'playing' || state === 'paused') start();
     });
   }
+
+  /** Open a song model in the player (used by free play for recordings). */
+  OP.openSong = (m) => { model = m; OP.app.setMode('songs'); };
 
   OP.registerMode('songs', {
     enter() { wire(); active = true; if (model) open(model); else showPicker(); },
