@@ -94,14 +94,19 @@
 
     down(m) { const k = this.els.get(m); if (k) k.classList.add('down'); }
     up(m) { const k = this.els.get(m); if (k) k.classList.remove('down'); }
+    mark(m, cls, on) { const k = this.els.get(m); if (k) k.classList.toggle(cls, on); }
     releaseAllVisual() { this.els.forEach((k) => k.classList.remove('down')); }
 
-    target(m, finger) {
+    target(m, finger) { this.targets([{ midi: m, finger }]); }
+    /** Make several keys glow (a chord), each with an optional finger number. */
+    targets(list) {
       this.clearTargets();
-      const k = this.els.get(m);
-      if (!k) return;
-      k.classList.add('target');
-      k.querySelector('.finger').textContent = finger || '';
+      list.forEach((tg) => {
+        const k = this.els.get(tg.midi);
+        if (!k) return;
+        k.classList.add('target');
+        k.querySelector('.finger').textContent = tg.finger || '';
+      });
     }
     clearTargets() {
       this.el.querySelectorAll('.key.target').forEach((k) => { k.classList.remove('target'); k.querySelector('.finger').textContent = ''; });

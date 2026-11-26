@@ -12,29 +12,32 @@
 
   const SP = 12; // staff space in SVG units
   const HS = SP / 2; // one diatonic step
+  const ACC = { '-1': '♭', '1': '♯', '0': '♮' };
 
   /**
    * opts.clef: 'treble' | 'bass' | 'grand'
-   * opts.notes: [{ midi, color, label, cls }]
+   * opts.notes: items drawn left to right. An item is a single note or a chord:
+   *   { midi | midis: [...], spelled?: [{step, acc}], flat?, color?, colors?: [...], label?, cls? }
    * opts.width: SVG width in user units
-   * opts.spacing: fixed distance between notes (default: spread across the staff)
+   * opts.spacing: fixed distance between items (default: spread across the staff)
    */
   function render(opts) {
     const clef = opts.clef || 'treble';
     const W = opts.width || 320;
-    const notes = opts.notes || [];
+    const items = opts.notes || [];
     const staves = [];
     let y = 60;
     if (clef !== 'bass') { staves.push({ kind: 'treble', top: y, lo: 30, hi: 38 }); y += 4 * SP + (clef === 'grand' ? 5 * SP : 0); }
     if (clef !== 'treble') { staves.push({ kind: 'bass', top: y, lo: 18, hi: 26 }); y += 4 * SP; }
-    const hasLabels = notes.some((n) => n.label);
+    const hasLabels = items.some((n) => n.label);
     const H = y + 60 + (hasLabels ? 20 : 0);
     const yOf = (st, s) => s.top + (s.hi - st) * HS;
     const staffFor = (st) => (staves.length === 1 ? staves[0] : st >= 28 ? staves[0] : staves[1]);
+    const line = (x1, x2, yy, cls) => '<line class="' + cls + '" x1="' + x1 + '" x2="' + x2 + '" y1="' + yy + '" y2="' + yy + '"/>';
 
     let out = '<svg class="staff" viewBox="0 0 ' + W + ' ' + H + '" role="img" xmlns="http://www.w3.org/2000/svg">';
     staves.forEach((s) => {
-      for (let i = 0; i < 5; i++) out += '<line class="staff-line" x1="6" x2="' + (W - 6) + '" y1="' + (s.top + i * SP) + '" y2="' + (s.top + i * SP) + '"/>';
+      for (let i = 0; i < 5; i++) out += line(6, W - 6, s.top + i * SP, 'staff-line');
       const sc = SP / 250;
       if (s.kind === 'treble') out += '<path class="clef" d="' + G_CLEF + '" transform="translate(14 ' + (s.top + 3 * SP) + ') scale(' + sc + ' ' + -sc + ')"/>';
       else out += '<path class="clef" d="' + F_CLEF + '" transform="translate(14 ' + (s.top + SP) + ') scale(' + sc + ' ' + -sc + ')"/>';
@@ -42,18 +45,37 @@
     if (staves.length === 2) out += '<line class="staff-line bar" x1="6" x2="6" y1="' + staves[0].top + '" y2="' + (staves[1].top + 4 * SP) + '"/>';
 
     const x0 = 64, x1 = W - 18;
-    const gap = opts.spacing || (x1 - x0) / Math.max(1, notes.length);
-    notes.forEach((n, i) => {
+    const gap = opts.spacing || (x1 - x0) / Math.max(1, items.length);
+    items.forEach((n, i) => {
       const x = x0 + gap * (i + 0.5);
-      const pos = OP.notes.step(n.midi);
-      const s = staffFor(pos.step);
-      const ny = yOf(pos.step, s);
+      const midis = n.midis || [n.midi];
+      const heads = midis.map((m, k) => {
+        const sp = (n.spelled && n.spelled[k]) || OP.notes.step(m, n.flat);
+        return { step: sp.step, acc: sp.acc, color: (n.colors && n.colors[k]) || n.color || 'currentColor' };
+      }).sort((a, b) => a.step - b.step);
       out += '<g class="note ' + (n.cls || '') + '">';
-      // Ledger lines (staff lines sit on even steps).
-      for (let k = s.lo - 2; k >= pos.step; k -= 2) out += '<line class="ledger" x1="' + (x - 13) + '" x2="' + (x + 13) + '" y1="' + yOf(k, s) + '" y2="' + yOf(k, s) + '"/>';
-      for (let k = s.hi + 2; k <= pos.step; k += 2) out += '<line class="ledger" x1="' + (x - 13) + '" x2="' + (x + 13) + '" y1="' + yOf(k, s) + '" y2="' + yOf(k, s) + '"/>';
-      if (pos.sharp) out += '<text class="accidental" x="' + (x - 13) + '" y="' + (ny + 5) + '" text-anchor="end">♯</text>';
-      out += '<ellipse class="head" cx="' + x + '" cy="' + ny + '" rx="7.6" ry="5.6" transform="rotate(-20 ' + x + ' ' + ny + ')" style="fill:' + (n.color || 'currentColor') + '"/>';
+      // Ledger lines, once per staff, out to the furthest head (staff lines sit on even steps).
+      staves.forEach((s) => {
+        const mine = heads.filter((h) => staffFor(h.step) === s);
+        if (!mine.length) return;
+        const lo = Math.min(...mine.map((h) => h.step)), hi = Math.max(...mine.map((h) => h.step));
+        for (let k = s.lo - 2; k >= lo; k -= 2) out += line(x - 13, x + 13, yOf(k, s), 'ledger');
+        for (let k = s.hi + 2; k <= hi; k += 2) out += line(x - 13, x + 13, yOf(k, s), 'ledger');
+      });
+      // Heads a step apart sit side by side, like printed music.
+      let accCount = 0;
+      heads.forEach((h, k) => {
+        const s = staffFor(h.step);
+        const ny = yOf(h.step, s);
+        const shifted = k > 0 && h.step - heads[k - 1].step === 1 && !heads[k - 1].shifted;
+        h.shifted = shifted;
+        const hx = shifted ? x + 14 : x;
+        if (h.acc) {
+          out += '<text class="accidental" x="' + (x - 12 - (accCount % 2) * 11) + '" y="' + (ny + 5) + '" text-anchor="end">' + ACC[h.acc] + '</text>';
+          accCount++;
+        }
+        out += '<ellipse class="head" cx="' + hx + '" cy="' + ny + '" rx="7.6" ry="5.6" transform="rotate(-20 ' + hx + ' ' + ny + ')" style="fill:' + h.color + '"/>';
+      });
       if (n.label) out += '<text class="note-label" x="' + x + '" y="' + (H - 14) + '" text-anchor="middle" style="fill:' + (n.labelColor || 'currentColor') + '">' + n.label + '</text>';
       out += '</g>';
     });

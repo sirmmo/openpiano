@@ -1,35 +1,20 @@
-/* Free play: big colourful note name, the notes on a grand staff, chord names. */
+/* Free play: big colourful note name, the notes on a grand staff (chords
+ * stacked), and the name of the chord being held. */
 (function () {
   'use strict';
   const OP = window.OP;
   const N = () => OP.notes;
   const $ = (s) => document.querySelector(s);
   const MAX = 12;
-  let history = [];
+  const CHORD_MS = 90; // keys pressed this close together are drawn as one chord
+  let history = []; // [{ midis: [], at }]
 
-  // Interval sets (from the root) → chord kind.
-  const CHORDS = [
-    ['0,4,7', 'maj'], ['0,3,7', 'min'], ['0,3,6', 'dim'], ['0,4,8', 'aug'], ['0,2,7', 'sus2'], ['0,5,7', 'sus4'],
-    ['0,4,7,10', 'dom7'], ['0,4,7,11', 'maj7'], ['0,3,7,10', 'min7'],
-  ];
-
-  function chordName(midis) {
-    const pcs = [...new Set(midis.map(N().pc))];
-    if (pcs.length < 3) return '';
-    const bass = Math.min(...midis);
-    // Prefer the lowest note as the root, then try the others (inversions).
-    const roots = [N().pc(bass), ...pcs.filter((p) => p !== N().pc(bass))];
-    for (const r of roots) {
-      const key = pcs.map((p) => (p - r + 12) % 12).sort((a, b) => a - b).join(',');
-      const hit = CHORDS.find((c) => c[0] === key);
-      if (hit) return N().name(r) + ' ' + OP.t('chord.' + hit[1]);
-    }
-    return '';
-  }
-
-  function other(m) {
-    const s = OP.settings.noteNames;
-    return s === 'letters' ? N().SOLFEGE[N().pc(m)] : s === 'solfege' ? N().LETTERS[N().pc(m)] : '';
+  function describe(held) {
+    const c = OP.chords.detect(held);
+    if (!c) return null;
+    const name = OP.chords.name(c.root, c.type);
+    const inv = c.inversion ? OP.t('inv' + c.inversion) : OP.t('inv0');
+    return { name, detail: inv, c };
   }
 
   function renderStaff() {
@@ -39,38 +24,55 @@
       clef: 'grand',
       width: w,
       spacing: (w - 90) / MAX,
-      notes: history.map((m) => ({ midi: m, color: N().color(m), label: N().name(m, OP.settings.noteNames === 'both' ? 'letters' : OP.settings.noteNames) })),
+      notes: history.map((h) => {
+        const c = h.midis.length >= 3 ? OP.chords.detect(h.midis) : null;
+        const sorted = h.midis.slice().sort((a, b) => a - b);
+        return {
+          midis: sorted,
+          spelled: c ? OP.chords.spell(sorted.find((m) => N().pc(m) === c.root) || sorted[0], c.type, sorted) : null,
+          colors: sorted.map(N().color),
+          label: c ? OP.chords.symbol(c.root, c.type) : sorted.length === 1 ? N().shortName(sorted[0]) : '',
+        };
+      }),
     });
   }
 
-  function show(m) {
+  function showNote(m) {
     const big = $('#freeNote');
-    big.textContent = N().name(m, OP.settings.noteNames === 'both' ? 'letters' : OP.settings.noteNames);
+    big.textContent = N().shortName(m);
     big.parentElement.style.setProperty('--c', N().color(m));
     big.classList.remove('pop');
     void big.offsetWidth;
     big.classList.add('pop');
-    $('#freeOther').textContent = OP.settings.noteNames === 'both' ? N().SOLFEGE[N().pc(m)] : other(m);
+    const s = OP.settings.noteNames;
+    $('#freeOther').textContent = s === 'letters' ? N().SOLFEGE[N().pc(m)] : N().LETTERS[N().pc(m)];
     $('#freeOctave').textContent = N().LETTERS[N().pc(m)] + N().octave(m) + (m === 60 ? ' · ★' : '');
   }
 
+  function showChord() {
+    const d = describe([...OP.app.held]);
+    if (!d) return false;
+    const big = $('#freeNote');
+    big.textContent = OP.chords.symbol(d.c.root, d.c.type);
+    big.parentElement.style.setProperty('--c', N().color(d.c.root + 60));
+    $('#freeOther').textContent = d.name;
+    $('#freeOctave').textContent = d.detail;
+    return true;
+  }
+
   OP.registerMode('free', {
-    enter() {
-      $('#freeChord').textContent = '';
-      renderStaff();
-    },
+    enter() { renderStaff(); },
     noteOn(m) {
-      history.push(m);
+      const now = performance.now();
+      const last = history[history.length - 1];
+      if (last && now - last.at < CHORD_MS && !last.midis.includes(m)) last.midis.push(m);
+      else history.push({ midis: [m], at: now });
       if (history.length > MAX) history = history.slice(-MAX);
-      show(m);
+      if (!showChord()) showNote(m);
       renderStaff();
-      $('#freeChord').textContent = chordName([...OP.app.held]);
       $('#freeHint').hidden = true;
     },
-    noteOff() {
-      const c = chordName([...OP.app.held]);
-      if (c) $('#freeChord').textContent = c;
-    },
+    noteOff() {},
     resize: renderStaff,
   });
   OP.on('texts', () => { if (!$('#mode-free').hidden) renderStaff(); });

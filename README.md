@@ -8,11 +8,14 @@ No keyboard? It also works with the mouse, touch screens and the computer keyboa
 
 ## What it does
 
-- **Free play** – every note gets a big name, its own colour and its place on a grand staff. Hold three keys and it names the chord (C major, A minor…).
-- **Songs** – notes fall onto the keys, Synthesia-style, with finger numbers. In *Wait for me* mode the song stops at each note until the child finds the right key, so nobody gets left behind. *Listen* plays the song first. Speed goes from 50% to 150%. Twelve traditional songs, from a five-finger warm-up to Jingle Bells.
-- **Read notes** – a note appears on the staff; play it. Six levels: middle C, treble clef, bass clef, both clefs, sharps. Two wrong tries and the right key starts to glow.
-- **Listen & find** – hear a note, find it on the keyboard. Starts with three notes, ends with all twelve.
-- Stars for every song and level, saved in the browser.
+- **Free play** – every note gets a big name, its own colour and its place on a grand staff. Play several keys together and they stack up as a chord on the staff, with its name and inversion (C major · 1st inversion).
+- **Songs** – notes fall onto the keys, Synthesia-style, with finger numbers. In *Wait for me* mode the song stops at each note or chord until the child presses all of its keys. *Listen* plays the song first; speed goes from 50% to 150%. Fourteen traditional songs, from a five-finger warm-up to Jingle Bells; seven of them have a left-hand chord part, plus two chord pieces (block chords C–F–G and broken chords).
+- **Parts** – every song is split into parts (right hand, left hand, or MIDI tracks). Tap a part to choose who plays it: *You play*, *Piano plays* (the app accompanies) or *Off*. Start with the right hand while the app plays the chords, then swap, then both hands.
+- **Your own MIDI files** – open a `.mid` file (or drop it on the Songs page) and it becomes a song: tracks become parts, tempo changes are followed, drums are skipped, and the melody track is picked for the child to play. Files are kept in the browser for next time.
+- **Read notes** – 14 levels: middle C, treble lines and spaces, up high, bass clef, ledger lines, both clefs, sharps, flats, then *read a little melody* (play 4–6 notes from the staff).
+- **Listen & find** – 10 levels: hear a note and find it, *higher or lower?*, and echo games (hear 2–4 notes, play them back).
+- **Chords** – 14 levels: play named chords (C F G, minors, every key, inversions, sevenths, diminished/augmented/sus), read chords on the treble and bass staff, *major or minor?* by ear, and hear-a-chord-play-it.
+- After two wrong tries the right keys start to glow. Stars for every song and level, saved in the browser.
 - English and Italian; note names as C D E, Do Re Mi, or both.
 
 ## MIDI
@@ -65,10 +68,17 @@ Songs live in [`js/songs.js`](js/songs.js) in a short text notation:
   id: 'mary', level: 1, bpm: 100, hand: 'C4',
   title: ['Mary Had a Little Lamb', 'Maria aveva un agnellino'],
   notes: 'E4 D4 C4 D4 | E4 E4 E4/2 | ...',
+  left:  '[C]/4 | [C]/4 | [G]/4 | ...',
 }
 ```
 
-`E4` is one beat, `C4/2` two beats, `G4/.5` half a beat, `r/1` a rest; `|` is ignored. `hand` is the key under the thumb: finger numbers are shown for notes within that five-finger position. Please only add melodies that are in the public domain.
+- `E4` is one beat, `C4/2` two beats, `G4/.5` half a beat, `r/1` a rest; `|` is ignored.
+- `C4+E4+G4/4` is a chord; `@135` adds finger numbers (one per note).
+- `[C]`, `[F]`, `[G]`, `[G7]`, `[Am]`, `[Dm]` are ready-made left-hand chord shapes.
+- `hand` is the key under the right thumb: finger numbers are added for notes inside that five-finger position.
+- `left` is optional; by default the app plays it and the child plays `notes`.
+
+Please only add melodies that are in the public domain. Anything else can be loaded as a MIDI file instead.
 
 ## Project layout
 
@@ -76,7 +86,7 @@ Songs live in [`js/songs.js`](js/songs.js) in a short text notation:
 index.html          page and markup
 css/style.css       all styles
 js/core.js          namespace, event bus, mode registry
-js/notes.js         note names, colours, staff positions
+js/notes.js         note names, colours, spelling, chords
 js/settings.js      settings and stars (localStorage)
 js/i18n.js          English / Italian strings
 js/audio.js         sampled piano, synth fallback, sound effects
@@ -84,7 +94,10 @@ js/midi.js          Web MIDI input/output
 js/keyboard.js      on-screen keyboard, mouse/touch/computer keys
 js/staff.js         SVG staff renderer
 js/songs.js         song book
-js/mode-*.js        the four modes
+js/midifile.js      MIDI file reader and saved-files library
+js/mode-free.js     free play
+js/mode-songs.js    song player
+js/mode-quiz.js     exercises (Read notes, Listen & find, Chords)
 js/main.js          app shell
 sounds/piano.js     piano samples (generated)
 ```

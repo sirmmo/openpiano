@@ -20,6 +20,7 @@
       <button class="tab" role="tab" data-mode="songs"><span class="tab-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M9 17.5a3 3 0 1 1-2-2.83V5.2l12-2.4v12.7a3 3 0 1 1-2-2.83V7.6l-8 1.6v8.3z"/></svg></span><span data-i18n="modeSongs">Songs</span></button>
       <button class="tab" role="tab" data-mode="notes"><span class="tab-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 6h20M2 10h20M2 14h20M2 18h20"/><ellipse cx="15" cy="12" rx="3.2" ry="2.3" transform="rotate(-20 15 12)" fill="currentColor" stroke="none"/></svg></span><span data-i18n="modeNotes">Read notes</span></button>
       <button class="tab" role="tab" data-mode="ear"><span class="tab-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 9a5 5 0 0 1 10 0c0 3-3 4-3 7a3 3 0 0 1-5.5 1.6"/><path d="M10 9.5a2 2 0 0 1 4 0c0 1.2-1 1.6-1.5 2.3"/></svg></span><span data-i18n="modeEar">Listen &amp; find</span></button>
+      <button class="tab" role="tab" data-mode="chords"><span class="tab-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><ellipse cx="9" cy="18" rx="3.4" ry="2.5" transform="rotate(-20 9 18)"/><ellipse cx="9" cy="12" rx="3.4" ry="2.5" transform="rotate(-20 9 12)"/><ellipse cx="9" cy="6" rx="3.4" ry="2.5" transform="rotate(-20 9 6)"/><rect x="11.6" y="3" width="1.8" height="15" rx=".9"/></svg></span><span data-i18n="modeChords">Chords</span></button>
     </nav>
     <div class="tools">
       <span class="star-total" aria-label="Stars"><span class="star on" aria-hidden="true">★</span><b id="totalStars">0</b></span>
@@ -38,7 +39,6 @@
           <div id="freeNote" class="free-note">♪</div>
           <div id="freeOther" class="free-other"></div>
           <div id="freeOctave" class="free-octave"></div>
-          <div id="freeChord" class="free-chord" aria-live="polite"></div>
         </div>
         <div class="free-side">
           <p id="freeHint" class="free-hint"><strong data-i18n="freeHint">Play any key!</strong> <span data-i18n="freeSub"></span></p>
@@ -52,6 +52,9 @@
       <div id="songPicker" class="picker">
         <h2 data-i18n="pickSong">Pick a song</h2>
         <div id="songGrid" class="song-grid"></div>
+        <h2 class="picker-h2" data-i18n="myMidi">My MIDI files</h2>
+        <div id="midiGrid" class="song-grid"></div>
+        <input type="file" id="midiInput" accept=".mid,.midi,.kar,.rmi,audio/midi,audio/x-midi" hidden>
       </div>
       <div id="songPlayer" class="player" hidden>
         <div class="player-bar">
@@ -65,6 +68,7 @@
             <label class="speed"><span data-i18n="speed">Speed</span> <input type="range" id="speedRange" min="0.5" max="1.5" step="0.1"> <output id="speedVal"></output></label>
           </div>
         </div>
+        <div id="partsBar" class="parts-bar" hidden></div>
         <div class="progress"><div id="songProgress"></div></div>
         <div class="lane-wrap">
           <canvas id="lane"></canvas>
@@ -84,66 +88,10 @@
       </div>
     </section>
 
-    <!-- Read notes -->
-    <section class="mode quiz" id="mode-notes" hidden>
-      <div class="quiz-levels picker">
-        <h2 data-i18n="pickLevel">Pick a level</h2>
-        <div class="level-grid"></div>
-      </div>
-      <div class="quiz-play" hidden>
-        <div class="quiz-bar">
-          <button class="btn ghost quiz-back">‹ <span data-i18n="back">Back</span></button>
-          <span class="quiz-level-name"></span>
-          <label class="switch any-octave"><input type="checkbox"><span class="track" aria-hidden="true"></span><span data-i18n="anyOctave">Any octave counts</span></label>
-        </div>
-        <div class="quiz-question">
-          <div class="quiz-staff staff-box"></div>
-          <div class="quiz-feedback" aria-live="polite"></div>
-          <div class="quiz-dots"></div>
-        </div>
-        <div class="quiz-result result" hidden>
-          <div class="result-stars stars big"></div>
-          <div class="result-title"></div>
-          <div class="result-detail"></div>
-          <div class="result-actions">
-            <button class="btn primary" data-act="again" data-i18n="playAgain">Play again</button>
-            <button class="btn ghost" data-act="list" data-i18n="pickLevel">Pick a level</button>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Listen & find -->
-    <section class="mode quiz" id="mode-ear" hidden>
-      <div class="quiz-levels picker">
-        <h2 data-i18n="pickLevel">Pick a level</h2>
-        <div class="level-grid"></div>
-      </div>
-      <div class="quiz-play" hidden>
-        <div class="quiz-bar">
-          <button class="btn ghost quiz-back">‹ <span data-i18n="back">Back</span></button>
-          <span class="quiz-level-name"></span>
-          <label class="switch any-octave"><input type="checkbox"><span class="track" aria-hidden="true"></span><span data-i18n="anyOctave">Any octave counts</span></label>
-        </div>
-        <div class="quiz-question">
-          <button class="ear-btn" aria-describedby="earHear">
-            <svg viewBox="0 0 24 24" width="54" height="54" aria-hidden="true"><path fill="currentColor" d="M4 9v6h4l5 4V5L8 9H4zm12.5 3a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4zM14 3.2v2.1a7 7 0 0 1 0 13.4v2.1a9 9 0 0 0 0-17.6z"/></svg>
-            <span id="earHear" data-i18n="hearAgain">Hear it again</span>
-          </button>
-          <div class="quiz-feedback" aria-live="polite"></div>
-          <div class="quiz-dots"></div>
-        </div>
-        <div class="quiz-result result" hidden>
-          <div class="result-stars stars big"></div>
-          <div class="result-title"></div>
-          <div class="result-detail"></div>
-          <div class="result-actions">
-            <button class="btn primary" data-act="again" data-i18n="playAgain">Play again</button>
-            <button class="btn ghost" data-act="list" data-i18n="pickLevel">Pick a level</button>
-          </div>
-        </div>
-      </div>
-    </section>
+    <!-- Exercises: filled in by js/mode-quiz.js -->
+    <section class="mode quiz" id="mode-notes" hidden></section>
+    <section class="mode quiz" id="mode-ear" hidden></section>
+    <section class="mode quiz" id="mode-chords" hidden></section>
   </main>
 
   <div class="keyboard-wrap">
@@ -227,6 +175,7 @@
   <script src="js/keyboard.js"></script>
   <script src="js/staff.js"></script>
   <script src="js/songs.js"></script>
+  <script src="js/midifile.js"></script>
   <script src="js/mode-free.js"></script>
   <script src="js/mode-songs.js"></script>
   <script src="js/mode-quiz.js"></script>

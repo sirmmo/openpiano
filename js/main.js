@@ -70,19 +70,27 @@
     if (before !== kb.lo + ':' + kb.hi) OP.emit('keyboard-resized');
   }
 
-  /** Play a note for a demo or a game prompt: through the chosen MIDI output, or the computer. */
+  /** Play a note for a demo, an accompaniment or a game prompt: through the chosen
+   * MIDI output, or the computer. visual: true = press the key on screen,
+   * 'auto' = a paler press for notes the app plays along. */
+  const playToken = new Map(); // midi -> id of the latest play() of that note
+  let playSeq = 0;
   function play(m, seconds, vel, visual) {
     vel = vel || 90;
+    const id = ++playSeq;
+    playToken.set(m, id);
+    const latest = () => playToken.get(m) === id; // a newer play() of the same note owns the release
     if (OP.midi.hasOutput()) {
       OP.midi.send(m, vel, true);
-      setTimeout(() => OP.midi.send(m, 0, false), seconds * 1000);
+      setTimeout(() => { if (latest()) OP.midi.send(m, 0, false); }, seconds * 1000);
     } else {
       OP.audio.noteOn(m, vel);
-      setTimeout(() => { if (!held.has(m)) OP.audio.noteOff(m); }, seconds * 1000);
+      setTimeout(() => { if (latest() && !held.has(m)) OP.audio.noteOff(m); }, seconds * 1000);
     }
     if (visual) {
-      kb.down(m);
-      setTimeout(() => { if (!held.has(m)) kb.up(m); }, seconds * 1000);
+      const cls = visual === 'auto' ? 'auto' : 'down';
+      kb.mark(m, cls, true);
+      setTimeout(() => { if (latest() && (cls === 'auto' || !held.has(m))) kb.mark(m, cls, false); }, seconds * 1000);
     }
   }
 
