@@ -1,4 +1,6 @@
-/* Song book. All melodies are traditional / public domain, in C major.
+/* Song book. All melodies are traditional / public domain, in C major,
+ * followed by finger exercises (group: 'tech'): five-finger patterns, scales
+ * with their standard fingering, and Hanon's first three exercises.
  *
  * Notation: space separated tokens, "|" separates bars (ignored).
  *   E4            one beat               C4/2     two beats     G4/.5  half a beat
@@ -7,7 +9,9 @@
  *   …@531         finger numbers, one per note of the token
  * hand: the key under the right thumb; finger numbers are added for notes
  * inside that five-finger position.
- * left: optional left-hand part (chords). By default the app plays it.
+ * left: optional left-hand part (chords). By default the app plays it
+ * (leftRole: 'play' makes it the child's part too).
+ * flat: true spells black keys as flats on the score.
  */
 (function () {
   'use strict';
@@ -22,6 +26,29 @@
     Am: ['C3+E3+A3', '521'],
     Dm: ['D3+F3+A3', '531'],
   };
+
+  /* ---------- Hanon, The Virtuoso Pianist (1873), Nos. 1–3 ----------
+   * Notes and fingering follow the original (as engraved by the Mutopia
+   * Project), shortened to one octave up and one down for small hands.
+   * Each figure is 8 notes; it moves up a step at a time, then mirrors downward. */
+  const wn = (step) => 'CDEFGAB'[((step % 7) + 7) % 7] + Math.floor(step / 7); // diatonic step → note name (C4 = 28)
+  function hanon(h) {
+    const fig = (start, offs, fingers) => offs.map((o, i) => wn(start + o) + '/.5@' + fingers[i]).join(' ');
+    const rh = [], lh = [];
+    for (let k = 0; k < 7; k++) { rh.push(fig(28 + k, h.up, h.rhUp)); lh.push(fig(21 + k, h.up, h.lhUp)); } // from C4 / C3
+    for (let st = 39; st >= h.downTo; st--) { rh.push(fig(st, h.down, h.rhDown)); lh.push(fig(st - 7, h.down, h.lhDown)); } // from G5 / G4
+    rh.push('C4/4@' + h.rhEnd);
+    lh.push('C3/4@' + h.lhEnd);
+    return { notes: rh.join(' | '), left: lh.join(' | ') };
+  }
+  const HANON = [
+    { up: [0, 2, 3, 4, 5, 4, 3, 2], rhUp: '12345432', lhUp: '54321234',
+      down: [0, -2, -3, -4, -5, -4, -3, -2], rhDown: '54321234', lhDown: '12345432', downTo: 32, rhEnd: 2, lhEnd: 4 },
+    { up: [0, 2, 5, 4, 3, 4, 3, 2], rhUp: '12543432', lhUp: '53123234',
+      down: [0, -3, -5, -4, -3, -4, -3, -2], rhDown: '52123234', lhDown: '13543432', downTo: 33, rhEnd: 1, lhEnd: 5 },
+    { up: [0, 2, 5, 4, 3, 2, 3, 4], rhUp: '12543234', lhUp: '53123432',
+      down: [0, -3, -5, -4, -3, -2, -3, -4], rhDown: '52123432', lhDown: '13543234', downTo: 33, rhEnd: 1, lhEnd: 5 },
+  ].map(hanon);
 
   const SONGS = [
     {
@@ -101,6 +128,59 @@
       title: ['Happy Birthday', 'Tanti auguri'],
       notes: 'G3/.75 G3/.25 | A3 G3 C4 | B3/2 G3/.75 G3/.25 | A3 G3 D4 | C4/2 G3/.75 G3/.25 | G4 E4 C4 | B3 A3 F4/.75 F4/.25 | E4 C4 D4 | C4/3',
     },
+
+    /* ---------- finger exercises ---------- */
+    {
+      id: 'five-hands', group: 'tech', level: 1, bpm: 80, leftRole: 'play',
+      title: ['Five fingers, both hands', 'Cinque dita, due mani'],
+      notes: 'C4@1 D4@2 E4@3 F4@4 | G4@5 F4@4 E4@3 D4@2 | C4@1 D4@2 E4@3 F4@4 | G4@5 F4@4 E4@3 D4@2 | C4/4@1',
+      left: 'C3@5 D3@4 E3@3 F3@2 | G3@1 F3@2 E3@3 D3@4 | C3@5 D3@4 E3@3 F3@2 | G3@1 F3@2 E3@3 D3@4 | C3/4@5',
+    },
+    {
+      id: 'five-keys', group: 'tech', level: 2, bpm: 80,
+      title: ['Five fingers in five keys', 'Cinque dita in cinque tonalità'],
+      notes: ['C4 D4 E4 F4 G4', 'G4 A4 B4 C5 D5', 'D4 E4 F#4 G4 A4', 'A4 B4 C#5 D5 E5', 'E4 F#4 G#4 A4 B4'].map((k) => {
+        const n = k.split(' ');
+        return n[0] + '@1 ' + n[1] + '@2 ' + n[2] + '@3 ' + n[3] + '@4 | ' + n[4] + '@5 ' + n[3] + '@4 ' + n[2] + '@3 ' + n[1] + '@2 | ' + n[0] + '/4@1';
+      }).join(' | '),
+      left: ['C3 D3 E3 F3 G3', 'G3 A3 B3 C4 D4', 'D3 E3 F#3 G3 A3', 'A3 B3 C#4 D4 E4', 'E3 F#3 G#3 A3 B3'].map((k) => {
+        const n = k.split(' ');
+        return n[0] + '@5 ' + n[1] + '@4 ' + n[2] + '@3 ' + n[3] + '@2 | ' + n[4] + '@1 ' + n[3] + '@2 ' + n[2] + '@3 ' + n[1] + '@4 | ' + n[0] + '/4@5';
+      }).join(' | '),
+    },
+    {
+      id: 'thumb-under', group: 'tech', level: 2, bpm: 72,
+      title: ['Thumb under: the {C} scale', 'Il pollice passa sotto: scala di {C}'],
+      notes: 'C4@1 D4@2 E4@3 F4@1 | G4@2 A4@3 B4@4 C5@5 | B4@4 A4@3 G4@2 F4@1 | E4@3 D4@2 C4/2@1',
+      left: 'C3@5 D3@4 E3@3 F3@2 | G3@1 A3@3 B3@2 C4@1 | B3@2 A3@3 G3@1 F3@2 | E3@3 D3@4 C3/2@5',
+    },
+    {
+      id: 'scale-g', group: 'tech', level: 2, bpm: 72,
+      title: ['{G} major scale', 'Scala di {G} maggiore'],
+      notes: 'G4@1 A4@2 B4@3 C5@1 | D5@2 E5@3 F#5@4 G5@5 | F#5@4 E5@3 D5@2 C5@1 | B4@3 A4@2 G4/2@1',
+      left: 'G3@5 A3@4 B3@3 C4@2 | D4@1 E4@3 F#4@2 G4@1 | F#4@2 E4@3 D4@1 C4@2 | B3@3 A3@4 G3/2@5',
+    },
+    {
+      id: 'scale-d', group: 'tech', level: 2, bpm: 72,
+      title: ['{D} major scale', 'Scala di {D} maggiore'],
+      notes: 'D4@1 E4@2 F#4@3 G4@1 | A4@2 B4@3 C#5@4 D5@5 | C#5@4 B4@3 A4@2 G4@1 | F#4@3 E4@2 D4/2@1',
+      left: 'D3@5 E3@4 F#3@3 G3@2 | A3@1 B3@3 C#4@2 D4@1 | C#4@2 B3@3 A3@1 G3@2 | F#3@3 E3@4 D3/2@5',
+    },
+    {
+      id: 'scale-f', group: 'tech', level: 2, bpm: 72, flat: true,
+      title: ['{F} major scale', 'Scala di {F} maggiore'],
+      notes: 'F4@1 G4@2 A4@3 Bb4@4 | C5@1 D5@2 E5@3 F5@4 | E5@3 D5@2 C5@1 Bb4@4 | A4@3 G4@2 F4/2@1',
+      left: 'F3@5 G3@4 A3@3 Bb3@2 | C4@1 D4@3 E4@2 F4@1 | E4@2 D4@3 C4@1 Bb3@2 | A3@3 G3@4 F3/2@5',
+    },
+    {
+      id: 'contrary', group: 'tech', level: 3, bpm: 66, leftRole: 'play',
+      title: ['Contrary motion', 'Moto contrario'],
+      notes: 'C4@1 D4@2 E4@3 F4@1 | G4@2 A4@3 B4@4 C5@5 | B4@4 A4@3 G4@2 F4@1 | E4@3 D4@2 C4/2@1',
+      left: 'C3@1 B2@2 A2@3 G2@1 | F2@2 E2@3 D2@4 C2@5 | D2@4 E2@3 F2@2 G2@1 | A2@3 B2@2 C3/2@1',
+    },
+    { id: 'hanon1', group: 'tech', level: 3, bpm: 60, title: ['Hanon No. 1', 'Hanon n. 1'], notes: HANON[0].notes, left: HANON[0].left },
+    { id: 'hanon2', group: 'tech', level: 3, bpm: 60, title: ['Hanon No. 2', 'Hanon n. 2'], notes: HANON[1].notes, left: HANON[1].left },
+    { id: 'hanon3', group: 'tech', level: 3, bpm: 60, title: ['Hanon No. 3', 'Hanon n. 3'], notes: HANON[2].notes, left: HANON[2].left },
   ];
 
   const diatonic = (m) => OP.notes.step(m).step;
@@ -143,12 +223,12 @@
   function model(song) {
     if (song.model) return song.model;
     const parts = [{ key: 'right', notes: parseLine(song.notes, song.hand), role: 'play' }];
-    if (song.left) parts.push({ key: 'left', notes: parseLine(song.left, null), role: 'listen' });
+    if (song.left) parts.push({ key: 'left', notes: parseLine(song.left, null), role: song.leftRole || 'listen' });
     const length = Math.max(...parts.map((p) => Math.max(...p.notes.map((n) => n.start + n.dur))));
     const [num, den] = song.meter || [4, 4];
     song.model = {
       id: 'song:' + song.id, title: song.title, tempos: [{ beat: 0, bpm: song.bpm }],
-      meters: [{ beat: 0, num, den }], pickup: song.pickup || 0, parts, length, level: song.level,
+      meters: [{ beat: 0, num, den }], pickup: song.pickup || 0, parts, length, level: song.level, flat: !!song.flat,
     };
     return song.model;
   }
@@ -181,7 +261,9 @@
     parseLine,
     meterAt,
     bars,
-    title: (s) => (Array.isArray(s.title) ? s.title[OP.settings.lang === 'it' ? 1 : 0] : s.title),
+    title: (s) => (Array.isArray(s.title) ? (OP.theory ? OP.theory.L(s.title[0], s.title[1]) : s.title[OP.settings.lang === 'it' ? 1 : 0]) : s.title),
+    /** Songs or finger exercises ('tech'). */
+    group: (g) => SONGS.filter((s) => (s.group || 'songs') === g),
     partName: (p) => (p.key === 'right' ? OP.t('rightHand') : p.key === 'left' ? OP.t('leftHand') : p.name),
   };
 })();

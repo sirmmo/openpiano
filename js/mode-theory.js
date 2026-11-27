@@ -11,12 +11,26 @@
 
   const root = document.getElementById('mode-theory');
   root.innerHTML =
-    '<div class="th-picker picker"><h2></h2><p class="th-intro"></p><div class="th-grid"></div></div>' +
+    '<div class="th-picker picker"><h2></h2><p class="th-intro"></p><div class="th-grid"></div>' +
+    '  <div class="th-practice"></div></div>' +
+    '<div class="th-play" hidden></div>' +
     '<div class="th-lesson" hidden>' +
     '  <div class="quiz-bar"><button class="btn ghost th-back">‹ <span data-i18n="back"></span></button><span class="quiz-level-name th-title"></span>' +
     '  <button class="btn ghost th-prev" aria-label="‹">‹</button><button class="btn th-next"></button></div>' +
     '  <div class="th-body"><article class="th-doc"></article></div>' +
     '</div>';
+
+  /* ---------- practice games (built by the exercise engine in mode-quiz.js) ---------- */
+  const practice = OP.quiz.make('theory', {
+    levelsRoot: root.querySelector('.th-practice'),
+    playRoot: root.querySelector('.th-play'),
+    heading: () => L('Practice', 'Esercizi'),
+    onView(v) {
+      root.querySelector('.th-play').hidden = v !== 'play';
+      if (v === 'play') { root.querySelector('.th-picker').hidden = true; root.querySelector('.th-lesson').hidden = true; }
+      else if (!lesson) root.querySelector('.th-picker').hidden = false;
+    },
+  });
 
   /* ---------- state ---------- */
   const S = { ci: 0, cminor: false, scaleRoot: 0, scaleType: 'major', famKey: 0 };
@@ -548,14 +562,7 @@
   /* ======================================================================
    * Lesson 5: rhythm and time
    * ==================================================================== */
-  function glyph(kind) {
-    const hollow = kind === 'w' || kind === 'h';
-    let s = '<svg class="glyph" viewBox="0 0 32 44" aria-hidden="true"><ellipse cx="12" cy="35" rx="7" ry="5" transform="rotate(-20 12 35)" fill="' + (hollow ? 'none' : 'currentColor') + '" stroke="currentColor" stroke-width="2.4"/>';
-    if (kind !== 'w') s += '<line x1="18.4" y1="34" x2="18.4" y2="5" stroke="currentColor" stroke-width="2.2"/>';
-    if (kind === 'e' || kind === 's') s += '<path d="M18.4 5c1 6 10 8 8 17" fill="none" stroke="currentColor" stroke-width="2.4"/>';
-    if (kind === 's') s += '<path d="M18.4 12c1 6 10 8 8 17" fill="none" stroke="currentColor" stroke-width="2.4"/>';
-    return s + '</svg>';
-  }
+  const glyph = (kind) => T().glyph(kind);
   const rhythm = {
     id: 'rhythm', color: '#38d9a9',
     title: () => L('Rhythm and time', 'Ritmo e tempo'),
@@ -726,8 +733,8 @@
   /* ---------- picker and navigation ---------- */
   function renderPicker() {
     $('.th-picker h2', root).textContent = L('Music theory', 'Teoria musicale');
-    $('.th-intro', root).textContent = L('Short lessons with examples you can hear. Keep the piano handy: many of them react to what you play.',
-      'Piccole lezioni con esempi da ascoltare. Tieni il pianoforte vicino: molte reagiscono a quello che suoni.');
+    $('.th-intro', root).textContent = L('Short lessons with examples you can hear. Keep the piano handy: many of them react to what you play. Below the lessons there are games to practise what you learned.',
+      'Piccole lezioni con esempi da ascoltare. Tieni il pianoforte vicino: molte reagiscono a quello che suoni. Sotto le lezioni ci sono dei giochi per esercitarti su quello che hai imparato.');
     const grid = $('.th-grid', root);
     grid.innerHTML = '';
     LESSONS.forEach((ls, k) => {
@@ -784,9 +791,15 @@
   $('.th-next', root).addEventListener('click', () => open(LESSONS[LESSONS.indexOf(lesson) + 1]));
 
   OP.registerMode('theory', {
-    enter() { active = true; OP.applyI18n(root); if (lesson) open(lesson, true); else showPicker(); },
-    exit() { active = false; stopPlayback(); },
-    noteOn(m) { if (lesson && lesson.noteOn) lesson.noteOn(m); },
+    enter() {
+      active = true;
+      OP.applyI18n(root);
+      if (practice.playing) practice.enter();
+      else { practice.enter(); if (lesson) open(lesson, true); else showPicker(); }
+    },
+    exit() { active = false; stopPlayback(); practice.exit(); },
+    noteOn(m, v, src) { if (practice.playing) practice.noteOn(m, v, src); else if (lesson && lesson.noteOn) lesson.noteOn(m); },
+    noteOff(m) { if (practice.playing) practice.noteOff(m); },
   });
   OP.on('texts', () => { if (!active) return; if (lesson) open(lesson, true); else renderPicker(); });
 })();

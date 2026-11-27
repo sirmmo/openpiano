@@ -78,6 +78,9 @@
       <div id="songPicker" class="picker">
         <h2 data-i18n="pickSong">Pick a song</h2>
         <div id="songGrid" class="song-grid"></div>
+        <h2 class="picker-h2" data-i18n="techTitle">Finger exercises</h2>
+        <p class="picker-sub" data-i18n="techSub"></p>
+        <div id="techGrid" class="song-grid"></div>
         <h2 class="picker-h2" data-i18n="myMidi">My MIDI files</h2>
         <div id="midiGrid" class="song-grid"></div>
         <input type="file" id="midiInput" accept=".mid,.midi,.kar,.rmi,audio/midi,audio/x-midi" hidden>
@@ -90,7 +93,8 @@
             <button id="playBtn" class="btn primary"></button>
             <button id="listenBtn" class="btn"></button>
             <button id="restartBtn" class="btn ghost">↺ <span data-i18n="restart">From the top</span></button>
-            <label class="switch"><input type="checkbox" id="waitToggle"><span class="track" aria-hidden="true"></span><span data-i18n="waitMode">Wait for me</span></label>
+            <div id="playModeSeg" class="seg-btns" role="group" data-i18n-label="playMode"><button type="button" data-wait="1" data-i18n="waitMode">Wait for me</button><button type="button" data-wait="0" data-i18n="inTime">Play in time</button></div>
+            <label class="switch" id="songMetroWrap"><input type="checkbox" id="songMetro"><span class="track" aria-hidden="true"></span><span data-i18n="metronome">Metronome</span></label>
             <label class="speed"><span data-i18n="speed">Speed</span> <input type="range" id="speedRange" min="0.5" max="1.5" step="0.1"> <output id="speedVal"></output></label>
             <button id="viewBtn" class="btn ghost view-btn" data-i18n-label="viewHint"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 5h20M2 9h20M2 13h20M2 17h20"/><ellipse cx="9" cy="15" rx="2.6" ry="1.9" transform="rotate(-20 9 15)" fill="currentColor" stroke="none"/><path d="M11.4 14.6V5" stroke-width="1.8"/></svg><span id="viewLabel"></span></button>
             <button id="dlBtn" class="btn ghost icon-only" data-i18n-label="download"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10.5l5 5 5-5M5 20h14"/></svg></button>

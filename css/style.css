@@ -630,3 +630,35 @@ select { font: inherit; font-weight: 700; padding: 6px 10px; border-radius: 10px
   .th-rrow .bar { grid-column: 1 / -1; }
   .th-next, .th-prev { display: none; }
 }
+
+/* ---------- songs: play in time, finger exercises ---------- */
+.seg-btns { display: inline-flex; background: var(--soft); border-radius: 12px; padding: 3px; gap: 2px; }
+.seg-btns button { border: 0; background: transparent; color: var(--ink-2); font: inherit; font-weight: 800; padding: 6px 12px; border-radius: 9px; cursor: pointer; }
+.seg-btns button[aria-pressed="true"] { background: var(--paper); color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.15); }
+.seg-btns button:focus-visible { outline: 3px solid var(--accent); outline-offset: 1px; }
+.picker-sub { margin: -6px 0 14px; color: var(--ink-2); font-weight: 600; max-width: 70ch; }
+.result-detail { white-space: pre-line; text-align: center; }
+
+/* ---------- theory practice ---------- */
+.th-practice { margin-top: 34px; }
+.th-practice .quiz-levels { padding: 0; height: auto; overflow: visible; }
+.th-play { height: 100%; }
+
+/* rhythm bars */
+.rhythm { color: var(--ink); }
+.rhythm .rh-line { stroke: var(--ink); stroke-width: 1.6; }
+.rhythm .rh-bar { stroke: var(--ink); stroke-width: 2.4; }
+.rhythm .rh-ts { font-weight: 900; font-size: 22px; fill: var(--ink); }
+.rhythm .rh-beat { fill: var(--soft); opacity: .55; }
+.rhythm .rh-count { font-weight: 800; font-size: 15px; fill: var(--ink-2); }
+.rhythm .rh-count.and { font-size: 13px; }
+.rhythm .rh-cursor { stroke: var(--accent); stroke-width: 3; stroke-linecap: round; }
+.rhythm .rh-tap { fill: var(--ink-2); }
+.rhythm .rh-tap.ok { fill: var(--good); }
+.rhythm .rh-tap.extra { fill: var(--bad); }
+@media (max-width: 560px) {
+  .seg-btns button { padding: 5px 9px; }
+  .th-practice { margin-top: 24px; }
+  .lane-msg { font-size: .95rem; padding: 8px 14px; border-radius: 14px; }
+  .lane-score { font-size: .8rem; }
+}

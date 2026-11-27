@@ -1,7 +1,9 @@
 /* Songs: notes fall onto the keys. Each song has parts (right hand, left-hand
  * chords, MIDI tracks); each part is played by the child, played by the app,
  * or muted. In "wait for me" mode the song stops at every note or chord until
- * all of its keys have been pressed. */
+ * all of its keys have been pressed. In "play in time" mode the song keeps
+ * going after a one-bar count-in (with a metronome if wanted) and every note
+ * is marked on time, early or late. */
 (function () {
   'use strict';
   const OP = window.OP;
@@ -13,20 +15,24 @@
   const EARLY = 0.6; // beats: a wrong key this close to the next note counts as an oops
   const WINDOW = 0.4; // beats: timing window in play-along mode
   const CHORD_GAP = 0.08; // beats: notes starting this close together form one chord
+  const ON_TIME = 0.1; // seconds either side that count as "on time"
+  const TIMING_COLORS = { good: '#2f9e44', early: '#e67700', late: '#d6336c' };
 
   let model = null, roles = [], score = null, bars = [];
   let notes = [], playNotes = [], autoNotes = [], groups = [];
   let gi = 0, autoIdx = 0, time = 0, state = 'ready', mistakes = 0, hits = 0;
   let canvas, ctx, W = 0, H = 0, dpr = 1, raf = 0, last = 0;
   let scanvas, sctx, SW = 0, SH = 0;
-  let particles = [];
+  let particles = [], labels = [];
   let active = false;
+  let timing = { good: 0, early: 0, late: 0 }, nextClick = 0, firstBeat = 0;
 
   const S = OP.settings;
   if (S.speed == null) S.speed = 1;
   if (S.waitMode == null) S.waitMode = true;
   if (!S.roles) S.roles = {};
   if (!S.view) S.view = 'both'; // 'both' | 'score' | 'lane'
+  if (S.songMetro == null) S.songMetro = true;
   const VIEWS = ['both', 'score', 'lane'];
 
   const starHtml = (n) => [1, 2, 3].map((i) => '<span class="star' + (i <= n ? ' on' : '') + '">★</span>').join('');
@@ -44,14 +50,13 @@
     return b;
   }
 
-  function renderPicker() {
-    const grid = $('#songGrid');
+  function songCards(list, grid) {
     grid.innerHTML = '';
-    OP.songs.list.forEach((s) => {
+    list.forEach((s) => {
       const m = OP.songs.model(s);
       const b = card(m, OP.songs.title(s), {
         top: '<span class="song-level" aria-label="' + t('level') + ' ' + s.level + '">' + '●'.repeat(s.level) + '<span class="dim">' + '●'.repeat(3 - s.level) + '</span>' +
-          (m.parts.length > 1 ? ' <span class="badge">' + t('withChords') + '</span>' : '') + '</span>',
+          (m.parts.length > 1 ? ' <span class="badge">' + t(s.group === 'tech' ? 'twoHands' : 'withChords') + '</span>' : '') + '</span>',
         bottom: '<span class="stars">' + starHtml(OP.store.stars(m.id)) + '</span>',
       });
       const go = () => open(m);
@@ -59,6 +64,17 @@
       b.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
       grid.appendChild(b);
     });
+  }
+
+  /** The built-in pieces in the same group as the open one (songs or finger exercises). */
+  function siblings() {
+    const s = OP.songs.list.find((x) => x.model === model);
+    return s ? OP.songs.group(s.group || 'songs') : [];
+  }
+
+  function renderPicker() {
+    songCards(OP.songs.group('songs'), $('#songGrid'));
+    songCards(OP.songs.group('tech'), $('#techGrid'));
 
     const mine = $('#midiGrid');
     mine.innerHTML = '';
@@ -179,14 +195,47 @@
     autoIdx = 0;
     mistakes = 0;
     hits = 0;
-    time = (notes.length ? Math.max(0, notes[0].start) : 0) - LEAD_IN; // skip a silent intro
+    timing = { good: 0, early: 0, late: 0 };
+    firstBeat = notes.length ? Math.max(0, notes[0].start) : 0; // skip a silent intro
+    // Play in time: exactly one bar of count-in. Wait for me: a few beats of falling notes.
+    time = firstBeat - (S.waitMode ? LEAD_IN : barLenAt(firstBeat));
+    nextClick = firstClick(time);
     state = 'ready';
     particles = [];
+    labels = [];
     $('#songResult').hidden = true;
-    setMsg(groups.length ? t('songReady') : t('nothingToPlay'));
+    setMsg(groups.length ? t(S.waitMode ? 'songReady' : 'songReadyTime') : t('nothingToPlay'));
     updateButtons();
     updateTarget();
     updateScore();
+  }
+
+  /* ---------- the beat grid (metronome and count-in) ---------- */
+  const meterOf = (b) => OP.songs.meterAt(model, Math.max(0, b));
+  const unitAt = (b) => 4 / meterOf(b).den; // one click per beat of the time signature
+  const barLenAt = (b) => { const m = meterOf(b); return (m.num * 4) / m.den; };
+  const anchor = () => (bars.length ? bars[0] : 0); // the first bar line
+  function firstClick(from) {
+    const u = unitAt(from), a = anchor();
+    return a + Math.ceil((from - a) / u - 1e-6) * u;
+  }
+  function isDownbeat(b) {
+    const a = anchor();
+    if (b < a - 1e-3) { const k = (a - b) / barLenAt(0); return Math.abs(k - Math.round(k)) < 1e-3; }
+    return bars.some((x) => Math.abs(x - b) < 1e-3) || Math.abs(b - a) < 1e-3;
+  }
+  /** Metronome clicks for the beats the song just went past. */
+  function clicks() {
+    while (nextClick <= time) {
+      const counting = nextClick < firstBeat - 1e-3;
+      if (counting || S.songMetro) (isDownbeat(nextClick) ? OP.audio.sfx.tock : OP.audio.sfx.tick)();
+      if (counting) {
+        const k = Math.round((nextClick - (firstBeat - barLenAt(firstBeat))) / unitAt(nextClick)) + 1;
+        setMsg(String(Math.max(1, k)));
+      } else if (Math.abs(nextClick - firstBeat) < 1e-3) setMsg('');
+      nextClick += unitAt(nextClick);
+    }
+    if (time >= firstBeat && $('#playerMsg').textContent && /^\d+$/.test($('#playerMsg').textContent)) setMsg('');
   }
 
   function setMsg(s) { const el = $('#playerMsg'); el.textContent = s || ''; el.hidden = !s; }
@@ -196,7 +245,9 @@
     play.textContent = state === 'playing' ? t('pause') : state === 'paused' ? t('resume') : t('startBtn');
     play.disabled = state === 'demo' || state === 'done';
     $('#listenBtn').textContent = state === 'demo' ? '■ ' + t('stopListen') : '♪ ' + t('listen');
-    $('#waitToggle').checked = S.waitMode;
+    document.querySelectorAll('#playModeSeg [data-wait]').forEach((b) => b.setAttribute('aria-pressed', String((b.dataset.wait === '1') === !!S.waitMode)));
+    $('#songMetroWrap').hidden = !!S.waitMode;
+    $('#songMetro').checked = !!S.songMetro;
     $('#speedRange').value = S.speed;
     $('#speedVal').textContent = Math.round(S.speed * 100) + '%';
     $('#viewLabel').textContent = t('view_' + S.view);
@@ -217,7 +268,7 @@
 
   function updateScore() {
     $('#songProgress').style.width = (groups.length ? (100 * gi) / groups.length : 0) + '%';
-    $('#songOops').textContent = !groups.length ? '' : S.waitMode ? t('oops', { n: mistakes }) : t('hits', { a: hits, b: playNotes.length });
+    $('#songOops').textContent = !groups.length ? '' : S.waitMode ? t('oops', { n: mistakes }) : t('timing', { g: timing.good, e: timing.early, l: timing.late });
   }
 
   function bpmAt(beat) {
@@ -249,9 +300,19 @@
     state = 'done';
     OP.app.kb.clearTargets();
     if (!groups.length) { reset(); return; }
-    let stars;
-    if (S.waitMode) stars = mistakes <= Math.max(1, groups.length * 0.05) ? 3 : mistakes <= Math.max(4, groups.length * 0.15) ? 2 : 1;
-    else { const acc = hits / playNotes.length; stars = acc >= 0.9 ? 3 : acc >= 0.7 ? 2 : 1; }
+    let stars, detail;
+    if (S.waitMode) {
+      stars = mistakes <= Math.max(1, groups.length * 0.05) ? 3 : mistakes <= Math.max(4, groups.length * 0.15) ? 2 : 1;
+      detail = t('oops', { n: mistakes });
+    } else {
+      // On time counts fully, early or late counts a bit, missed counts nothing.
+      const sc = (timing.good + 0.6 * (timing.early + timing.late)) / playNotes.length;
+      stars = sc >= 0.85 ? 3 : sc >= 0.6 ? 2 : 1;
+      const missed = playNotes.length - hits;
+      detail = t('timing', { g: timing.good, e: timing.early, l: timing.late }) + (missed ? ' · ' + t('missed', { n: missed }) : '');
+      if (timing.early >= 3 && timing.early > 2 * timing.late) detail += '\n' + t('adviceEarly');
+      else if (timing.late >= 3 && timing.late > 2 * timing.early) detail += '\n' + t('adviceLate');
+    }
     const record = OP.store.award(model.id, stars);
     OP.emit('progress');
     OP.audio.sfx.fanfare();
@@ -259,10 +320,10 @@
     const box = $('#songResult');
     box.querySelector('.result-stars').innerHTML = starHtml(stars);
     box.querySelector('.result-title').textContent = stars === 3 ? t('great') : stars === 2 ? t('good') : t('ok');
-    box.querySelector('.result-detail').textContent =
-      (S.waitMode ? t('oops', { n: mistakes }) : t('hits', { a: hits, b: playNotes.length })) + (record ? ' · ' + t('newRecord') : '');
-    const idx = OP.songs.list.findIndex((s) => s.model === model);
-    box.querySelector('[data-act="next"]').hidden = idx < 0 || idx >= OP.songs.list.length - 1;
+    box.querySelector('.result-detail').textContent = detail + (record ? ' · ' + t('newRecord') : '');
+    const sib = siblings(), idx = sib.findIndex((s) => s.model === model);
+    box.querySelector('[data-act="next"]').hidden = idx < 0 || idx >= sib.length - 1;
+    box.querySelector('[data-act="next"]').textContent = t(sib[0] && sib[0].group === 'tech' ? 'nextExercise' : 'nextSong');
     box.hidden = false;
     updateButtons();
   }
@@ -272,6 +333,13 @@
     hits++;
     const g = OP.app.kb.keyGeom(n.midi);
     if (g) burst(((g.x + g.w / 2) / 100) * W, H - 4, 12, N().color(n.midi));
+    if (!S.waitMode && state === 'playing') {
+      const sec = (time - n.start) / ((bpmAt(Math.max(0, time)) / 60) * S.speed);
+      const cls = Math.abs(sec) <= ON_TIME ? 'good' : sec < 0 ? 'early' : 'late';
+      timing[cls]++;
+      n.timing = cls;
+      if (g) labels.push({ text: t('t_' + cls), x: ((g.x + g.w / 2) / 100) * W, y: H - 30, c: TIMING_COLORS[cls], life: 0.9, max: 0.9 });
+    }
     OP.app.kb.flash(n.midi, 'good');
     while (groups[gi] && groups[gi].notes.every((x) => x.state)) gi++;
     updateTarget();
@@ -283,6 +351,7 @@
     const g = groups[gi];
     if (!g) return;
     if (state === 'ready') {
+      if (!S.waitMode) { start(); return; } // any key starts the count-in
       const n = g.notes.find((x) => x.midi === m && !x.state);
       if (!n) return;
       state = 'playing';
@@ -326,6 +395,7 @@
       const g = groups[gi];
       if (S.waitMode && g && target >= g.start) target = g.start; // wait for the child
       time = target;
+      if (!S.waitMode) clicks();
       autoplay(autoNotes, bps);
       if (!S.waitMode) {
         while (groups[gi] && time > groups[gi].start + WINDOW) {
@@ -343,6 +413,8 @@
     }
     particles.forEach((p) => { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 900 * dt; p.life -= dt; });
     particles = particles.filter((p) => p.life > 0);
+    labels.forEach((l) => { l.y -= 50 * dt; l.life -= dt; });
+    labels = labels.filter((l) => l.life > 0);
   }
 
   function rr(x, y, w, h, r) {
@@ -455,6 +527,18 @@
       ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
       ctx.fill();
     });
+    // "on time / early / late" floating up from the keys
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+    ctx.font = '800 15px ' + font;
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = th.dark ? 'rgba(20,16,30,.85)' : 'rgba(255,255,255,.9)';
+    labels.forEach((l) => {
+      ctx.globalAlpha = Math.max(0, Math.min(1, l.life / l.max * 1.6));
+      ctx.strokeText(l.text, l.x, l.y);
+      ctx.fillStyle = l.c;
+      ctx.fillText(l.text, l.x, l.y);
+    });
     ctx.globalAlpha = 1;
   }
 
@@ -522,7 +606,13 @@
     $('#playBtn').addEventListener('click', start);
     $('#listenBtn').addEventListener('click', listen);
     $('#restartBtn').addEventListener('click', reset);
-    $('#waitToggle').addEventListener('change', (e) => { OP.store.set('waitMode', e.target.checked); reset(); });
+    $('#playModeSeg').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-wait]');
+      if (!b) return;
+      OP.store.set('waitMode', b.dataset.wait === '1');
+      reset();
+    });
+    $('#songMetro').addEventListener('change', (e) => OP.store.set('songMetro', e.target.checked));
     $('#speedRange').addEventListener('input', (e) => { OP.store.set('speed', +e.target.value); updateButtons(); });
     $('#midiInput').addEventListener('change', (e) => { importFile(e.target.files[0]); e.target.value = ''; });
     $('#songResult').addEventListener('click', (e) => {
@@ -531,8 +621,8 @@
       if (act.dataset.act === 'again') reset();
       if (act.dataset.act === 'list') showPicker();
       if (act.dataset.act === 'next') {
-        const idx = OP.songs.list.findIndex((s) => s.model === model);
-        open(OP.songs.model(OP.songs.list[idx + 1]));
+        const sib = siblings(), idx = sib.findIndex((s) => s.model === model);
+        if (sib[idx + 1]) open(OP.songs.model(sib[idx + 1]));
       }
     });
     // Drop a .mid file anywhere on the Songs page.
@@ -570,7 +660,7 @@
       renderParts();
       updateButtons();
       updateScore();
-      if (state === 'ready') setMsg(groups.length ? t('songReady') : t('nothingToPlay'));
+      if (state === 'ready') setMsg(groups.length ? t(S.waitMode ? 'songReady' : 'songReadyTime') : t('nothingToPlay'));
     } else renderPicker();
   });
   OP.on('progress', () => { if (active && !model) renderPicker(); });
