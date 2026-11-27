@@ -1,6 +1,7 @@
 /* Song book. All melodies are traditional / public domain, in C major,
  * followed by finger exercises (group: 'tech'): five-finger patterns and scales
- * with their standard fingering, and Hanon Nos. 1–20 (group: 'hanon').
+ * with their standard fingering, Hanon Nos. 1–20 (group: 'hanon') and Czerny
+ * (groups 'czerny840' and 'czerny821').
  *
  * Notation: space separated tokens, "|" separates bars (ignored).
  *   E4            one beat               C4/2     two beats     G4/.5  half a beat
@@ -52,6 +53,36 @@
         id: 'hanon' + h.n, group: 'hanon', level: h.n <= 10 ? 2 : 3, bpm: 60,
         title: ['Hanon No. ' + h.n, 'Hanon n. ' + h.n],
         notes: hanonPart(h.rh, shift), left: hanonPart(h.lh, shift),
+      };
+    });
+  }
+
+  /* ---------- Czerny: Op. 840 Nos. 1–10 and Op. 821 Nos. 1–19 ----------
+   * From js/czerny.js (generated from the Mutopia Project's engravings). */
+  function czernySongs() {
+    return (OP.czernyData || []).map((p) => {
+      const R = 96;
+      const dec = (arr) => {
+        const out = [];
+        let t = 0;
+        for (let i = 0; i < arr.length; i += 3) { t += arr[i]; out.push({ midi: arr[i + 2], start: t / R, dur: arr[i + 1] / R, finger: null, vel: 90 }); }
+        return out;
+      };
+      const parts = [{ key: 'right', notes: dec(p.rh), role: 'play' }, { key: 'left', notes: dec(p.lh), role: 'listen' }];
+      const id = 'czerny' + p.op + '-' + p.no;
+      const title = ['Czerny, Op. ' + p.op + ' No. ' + p.no, 'Czerny, op. ' + p.op + ' n. ' + p.no];
+      const keys = p.keys.map(([t, sf]) => ({ beat: t / R, sf }));
+      const level = p.op === 840 ? 2 : 3;
+      return {
+        id, group: 'czerny' + p.op, level, title, short: ['No. ' + p.no, 'N. ' + p.no], tempoWord: p.tempo,
+        model: {
+          id: 'song:' + id, title, level, pickup: p.pickup, parts, flat: p.flat,
+          // Spell black keys with flats only while the music is in a flat key.
+          flatAt: (beat) => { let sf = 0; for (const k of keys) { if (k.beat <= beat + 0.01) sf = k.sf; else break; } return sf < 0; },
+          tempos: p.tempos.map(([t, bpm]) => ({ beat: t / R, bpm })),
+          meters: p.meters.map(([t, num, den]) => ({ beat: t / R, num, den })),
+          length: Math.max(...parts.flatMap((x) => x.notes.map((n) => n.start + n.dur))),
+        },
       };
     });
   }
@@ -185,6 +216,7 @@
       left: 'C3@1 B2@2 A2@3 G2@1 | F2@2 E2@3 D2@4 C2@5 | D2@4 E2@3 F2@2 G2@1 | A2@3 B2@2 C3/2@1',
     },
     ...hanonSongs(),
+    ...czernySongs(),
   ];
 
   const diatonic = (m) => OP.notes.step(m).step;

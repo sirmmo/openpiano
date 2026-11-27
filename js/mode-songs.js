@@ -54,7 +54,8 @@
     grid.innerHTML = '';
     list.forEach((s) => {
       const m = OP.songs.model(s);
-      const b = card(m, OP.songs.title(s), {
+      const name = s.short ? OP.theory.L(s.short[0], s.short[1]) + (s.tempoWord ? '<small class="song-sub">' + s.tempoWord + '</small>' : '') : OP.songs.title(s);
+      const b = card(m, name, {
         top: '<span class="song-level" aria-label="' + t('level') + ' ' + s.level + '">' + '●'.repeat(s.level) + '<span class="dim">' + '●'.repeat(3 - s.level) + '</span>' +
           (m.parts.length > 1 ? ' <span class="badge">' + t(s.group ? 'twoHands' : 'withChords') + '</span>' : '') + '</span>',
         bottom: '<span class="stars">' + starHtml(OP.store.stars(m.id)) + '</span>',
@@ -76,6 +77,8 @@
     songCards(OP.songs.group('songs'), $('#songGrid'));
     songCards(OP.songs.group('tech'), $('#techGrid'));
     songCards(OP.songs.group('hanon'), $('#hanonGrid'));
+    songCards(OP.songs.group('czerny840'), $('#czerny840Grid'));
+    songCards(OP.songs.group('czerny821'), $('#czerny821Grid'));
 
     const mine = $('#midiGrid');
     mine.innerHTML = '';
@@ -181,7 +184,7 @@
       p.notes.forEach((n) => notes.push(Object.assign({}, n, { part: pi, hand, play: roles[pi] === 'play', state: '' })));
     });
     notes.sort((a, b) => a.start - b.start || a.midi - b.midi);
-    score = OP.score.prepare(notes, model.flat);
+    score = OP.score.prepare(notes, model.flatAt || model.flat);
     const wrap = $('#stageWrap');
     if (wrap.dataset.clef !== score.clef) { wrap.dataset.clef = score.clef; resize(); }
     playNotes = notes.filter((n) => n.play);
@@ -604,6 +607,10 @@
     });
     $('#dlBtn').addEventListener('click', () => { if (model) OP.midiFile.download(model); });
     $('#backBtn').addEventListener('click', showPicker);
+    document.querySelectorAll('#songPicker [data-jump]').forEach((b) => b.addEventListener('click', () => {
+      const target = document.getElementById(b.dataset.jump);
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }));
     $('#playBtn').addEventListener('click', start);
     $('#listenBtn').addEventListener('click', listen);
     $('#restartBtn').addEventListener('click', reset);

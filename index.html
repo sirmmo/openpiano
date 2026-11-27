@@ -76,15 +76,28 @@
     <!-- Songs -->
     <section class="mode" id="mode-songs" hidden>
       <div id="songPicker" class="picker">
+        <nav class="picker-jump" data-i18n-label="jumpTo">
+          <button type="button" data-jump="songGrid" data-i18n="modeSongs">Songs</button>
+          <button type="button" data-jump="techH" data-i18n="techTitle">Finger exercises</button>
+          <button type="button" data-jump="hanonH">Hanon</button>
+          <button type="button" data-jump="czernyH">Czerny</button>
+          <button type="button" data-jump="midiH" data-i18n="jumpMidi">My files</button>
+        </nav>
         <h2 data-i18n="pickSong">Pick a song</h2>
         <div id="songGrid" class="song-grid"></div>
-        <h2 class="picker-h2" data-i18n="techTitle">Finger exercises</h2>
+        <h2 class="picker-h2" id="techH" data-i18n="techTitle">Finger exercises</h2>
         <p class="picker-sub" data-i18n="techSub"></p>
         <div id="techGrid" class="song-grid"></div>
-        <h2 class="picker-h2" data-i18n="hanonTitle">Hanon: The Virtuoso Pianist</h2>
+        <h2 class="picker-h2" id="hanonH" data-i18n="hanonTitle">Hanon: The Virtuoso Pianist</h2>
         <p class="picker-sub" data-i18n="hanonSub"></p>
         <div id="hanonGrid" class="song-grid"></div>
-        <h2 class="picker-h2" data-i18n="myMidi">My MIDI files</h2>
+        <h2 class="picker-h2" id="czernyH" data-i18n="czerny840Title">Czerny: Melodic Studies, Op. 840</h2>
+        <p class="picker-sub" data-i18n="czerny840Sub"></p>
+        <div id="czerny840Grid" class="song-grid"></div>
+        <h2 class="picker-h2" data-i18n="czerny821Title">Czerny: Eight-Measure Exercises, Op. 821</h2>
+        <p class="picker-sub" data-i18n="czerny821Sub"></p>
+        <div id="czerny821Grid" class="song-grid"></div>
+        <h2 class="picker-h2" id="midiH" data-i18n="myMidi">My MIDI files</h2>
         <div id="midiGrid" class="song-grid"></div>
         <input type="file" id="midiInput" accept=".mid,.midi,.kar,.rmi,audio/midi,audio/x-midi" hidden>
       </div>
@@ -98,7 +111,7 @@
             <button id="restartBtn" class="btn ghost">↺ <span data-i18n="restart">From the top</span></button>
             <div id="playModeSeg" class="seg-btns" role="group" data-i18n-label="playMode"><button type="button" data-wait="1" data-i18n="waitMode">Wait for me</button><button type="button" data-wait="0" data-i18n="inTime">Play in time</button></div>
             <label class="switch" id="songMetroWrap"><input type="checkbox" id="songMetro"><span class="track" aria-hidden="true"></span><span data-i18n="metronome">Metronome</span></label>
-            <label class="speed"><span data-i18n="speed">Speed</span> <input type="range" id="speedRange" min="0.5" max="1.5" step="0.1"> <output id="speedVal"></output></label>
+            <label class="speed"><span data-i18n="speed">Speed</span> <input type="range" id="speedRange" min="0.3" max="1.5" step="0.1"> <output id="speedVal"></output></label>
             <button id="viewBtn" class="btn ghost view-btn" data-i18n-label="viewHint"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 5h20M2 9h20M2 13h20M2 17h20"/><ellipse cx="9" cy="15" rx="2.6" ry="1.9" transform="rotate(-20 9 15)" fill="currentColor" stroke="none"/><path d="M11.4 14.6V5" stroke-width="1.8"/></svg><span id="viewLabel"></span></button>
             <button id="dlBtn" class="btn ghost icon-only" data-i18n-label="download"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10.5l5 5 5-5M5 20h14"/></svg></button>
           </div>
@@ -223,6 +236,7 @@
   <script src="js/staff.js"></script>
   <script src="js/score.js"></script>
   <script src="js/hanon.js"></script>
+  <script src="js/czerny.js"></script>
   <script src="js/songs.js"></script>
   <script src="js/midifile.js"></script>
   <script src="js/mode-free.js"></script>

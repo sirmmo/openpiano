@@ -49,7 +49,7 @@
       const key = staff + ':' + n.part + ':' + Math.round(n.start * 1000);
       let g = byKey.get(key);
       if (!g) { g = { start: n.start, dur: 0, staff, play: n.play, heads: [] }; byKey.set(key, g); glyphs.push(g); }
-      const sp = OP.notes.step(n.midi, flat);
+      const sp = OP.notes.step(n.midi, typeof flat === 'function' ? flat(n.start) : flat);
       g.heads.push({ n, step: sp.step, acc: sp.acc });
       g.dur = Math.max(g.dur, n.dur);
       maxDur = Math.max(maxDur, n.dur);
