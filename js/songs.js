@@ -1,6 +1,6 @@
 /* Song book. All melodies are traditional / public domain, in C major,
- * followed by finger exercises (group: 'tech'): five-finger patterns, scales
- * with their standard fingering, and Hanon's first three exercises.
+ * followed by finger exercises (group: 'tech'): five-finger patterns and scales
+ * with their standard fingering, and Hanon Nos. 1–20 (group: 'hanon').
  *
  * Notation: space separated tokens, "|" separates bars (ignored).
  *   E4            one beat               C4/2     two beats     G4/.5  half a beat
@@ -27,28 +27,34 @@
     Dm: ['D3+F3+A3', '531'],
   };
 
-  /* ---------- Hanon, The Virtuoso Pianist (1873), Nos. 1–3 ----------
-   * Notes and fingering follow the original (as engraved by the Mutopia
-   * Project), shortened to one octave up and one down for small hands.
-   * Each figure is 8 notes; it moves up a step at a time, then mirrors downward. */
+  /* ---------- Hanon, The Virtuoso Pianist (1873), Nos. 1–20 ----------
+   * Notes and fingering come from js/hanon.js (generated from the Mutopia
+   * Project's engraving of the original), shortened to one octave up and one
+   * down for small hands. Sixteenths become eighths; the last note fills a bar. */
   const wn = (step) => 'CDEFGAB'[((step % 7) + 7) % 7] + Math.floor(step / 7); // diatonic step → note name (C4 = 28)
-  function hanon(h) {
-    const fig = (start, offs, fingers) => offs.map((o, i) => wn(start + o) + '/.5@' + fingers[i]).join(' ');
-    const rh = [], lh = [];
-    for (let k = 0; k < 7; k++) { rh.push(fig(28 + k, h.up, h.rhUp)); lh.push(fig(21 + k, h.up, h.lhUp)); } // from C4 / C3
-    for (let st = 39; st >= h.downTo; st--) { rh.push(fig(st, h.down, h.rhDown)); lh.push(fig(st - 7, h.down, h.lhDown)); } // from G5 / G4
-    rh.push('C4/4@' + h.rhEnd);
-    lh.push('C3/4@' + h.lhEnd);
-    return { notes: rh.join(' | '), left: lh.join(' | ') };
+  function hanonFigures(d) {
+    const out = [];
+    for (let i = 0; i < d.nUp; i++) out.push(i === d.nUp - 1 && d.upLast ? d.upLast : i === 0 && d.upFirst ? d.upFirst : { s: d.up.s + i, o: d.up.o, f: d.up.f });
+    for (let i = 0; i < d.nDown; i++) out.push(i === d.nDown - 1 && d.downLast ? d.downLast : i === 0 && d.downFirst ? d.downFirst : { s: d.down.s - i, o: d.down.o, f: d.down.f });
+    return out;
   }
-  const HANON = [
-    { up: [0, 2, 3, 4, 5, 4, 3, 2], rhUp: '12345432', lhUp: '54321234',
-      down: [0, -2, -3, -4, -5, -4, -3, -2], rhDown: '54321234', lhDown: '12345432', downTo: 32, rhEnd: 2, lhEnd: 4 },
-    { up: [0, 2, 5, 4, 3, 4, 3, 2], rhUp: '12543432', lhUp: '53123234',
-      down: [0, -3, -5, -4, -3, -4, -3, -2], rhDown: '52123234', lhDown: '13543432', downTo: 33, rhEnd: 1, lhEnd: 5 },
-    { up: [0, 2, 5, 4, 3, 2, 3, 4], rhUp: '12543234', lhUp: '53123432',
-      down: [0, -3, -5, -4, -3, -2, -3, -4], rhDown: '52123432', lhDown: '13543234', downTo: 33, rhEnd: 1, lhEnd: 5 },
-  ].map(hanon);
+  function hanonPart(d, shift) {
+    const out = hanonFigures(d).map((g) => g.o.map((o, k) => wn(g.s + o + shift) + '/.5' + (g.f[k] ? '@' + g.f[k] : '')).join(' '));
+    const fingers = d.end.some((e) => e.f) ? '@' + d.end.map((e) => e.f || 0).join('') : '';
+    out.push(d.end.map((e) => wn(e.s + shift)).join('+') + '/4' + fingers);
+    return out.join(' | ');
+  }
+  function hanonSongs() {
+    return (OP.hanonData || []).map((h) => {
+      const top = Math.max(...hanonFigures(h.rh).flatMap((g) => g.o.map((o) => g.s + o)));
+      const shift = top > 42 ? -7 : 0; // keep everything on a 49-key keyboard (C2–C6)
+      return {
+        id: 'hanon' + h.n, group: 'hanon', level: h.n <= 10 ? 2 : 3, bpm: 60,
+        title: ['Hanon No. ' + h.n, 'Hanon n. ' + h.n],
+        notes: hanonPart(h.rh, shift), left: hanonPart(h.lh, shift),
+      };
+    });
+  }
 
   const SONGS = [
     {
@@ -178,9 +184,7 @@
       notes: 'C4@1 D4@2 E4@3 F4@1 | G4@2 A4@3 B4@4 C5@5 | B4@4 A4@3 G4@2 F4@1 | E4@3 D4@2 C4/2@1',
       left: 'C3@1 B2@2 A2@3 G2@1 | F2@2 E2@3 D2@4 C2@5 | D2@4 E2@3 F2@2 G2@1 | A2@3 B2@2 C3/2@1',
     },
-    { id: 'hanon1', group: 'tech', level: 3, bpm: 60, title: ['Hanon No. 1', 'Hanon n. 1'], notes: HANON[0].notes, left: HANON[0].left },
-    { id: 'hanon2', group: 'tech', level: 3, bpm: 60, title: ['Hanon No. 2', 'Hanon n. 2'], notes: HANON[1].notes, left: HANON[1].left },
-    { id: 'hanon3', group: 'tech', level: 3, bpm: 60, title: ['Hanon No. 3', 'Hanon n. 3'], notes: HANON[2].notes, left: HANON[2].left },
+    ...hanonSongs(),
   ];
 
   const diatonic = (m) => OP.notes.step(m).step;

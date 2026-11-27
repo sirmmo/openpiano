@@ -56,7 +56,7 @@
       const m = OP.songs.model(s);
       const b = card(m, OP.songs.title(s), {
         top: '<span class="song-level" aria-label="' + t('level') + ' ' + s.level + '">' + '●'.repeat(s.level) + '<span class="dim">' + '●'.repeat(3 - s.level) + '</span>' +
-          (m.parts.length > 1 ? ' <span class="badge">' + t(s.group === 'tech' ? 'twoHands' : 'withChords') + '</span>' : '') + '</span>',
+          (m.parts.length > 1 ? ' <span class="badge">' + t(s.group ? 'twoHands' : 'withChords') + '</span>' : '') + '</span>',
         bottom: '<span class="stars">' + starHtml(OP.store.stars(m.id)) + '</span>',
       });
       const go = () => open(m);
@@ -75,6 +75,7 @@
   function renderPicker() {
     songCards(OP.songs.group('songs'), $('#songGrid'));
     songCards(OP.songs.group('tech'), $('#techGrid'));
+    songCards(OP.songs.group('hanon'), $('#hanonGrid'));
 
     const mine = $('#midiGrid');
     mine.innerHTML = '';
@@ -323,7 +324,7 @@
     box.querySelector('.result-detail').textContent = detail + (record ? ' · ' + t('newRecord') : '');
     const sib = siblings(), idx = sib.findIndex((s) => s.model === model);
     box.querySelector('[data-act="next"]').hidden = idx < 0 || idx >= sib.length - 1;
-    box.querySelector('[data-act="next"]').textContent = t(sib[0] && sib[0].group === 'tech' ? 'nextExercise' : 'nextSong');
+    box.querySelector('[data-act="next"]').textContent = t(sib[0] && sib[0].group ? 'nextExercise' : 'nextSong');
     box.hidden = false;
     updateButtons();
   }
